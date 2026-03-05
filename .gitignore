@@ -34,3 +34,28 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Flutter build
+build/
+.flutter-plugins-dependencies
+
+# Web
+web/favicon.png
+web/icons/
+
+# Firebase (keep options, ignore local configs)
+firebase.json
+.firebaserc
+
