@@ -8,9 +8,9 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
-    // Allow authenticated users to read exercises; allow writes only via admin/seed
+    // Exercises are public reference data — allow all reads
     match /exercises/{exerciseId} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow write: if request.auth != null;
     }
     // Allow authenticated users to read/write their own workouts
