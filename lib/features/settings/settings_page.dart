@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../data/services/auth_service.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -52,19 +51,6 @@ class SettingsPage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               context.push('/settings/goals');
-            },
-          ),
-          const Divider(),
-          _buildSectionHeader(context, 'Account'),
-          ListTile(
-            leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
-            title: Text(
-              'Sign Out',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-            onTap: () async {
-              await AuthService().signOut();
-              if (context.mounted) context.go('/login');
             },
           ),
           const SizedBox(height: 24),

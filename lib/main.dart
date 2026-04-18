@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'data/services/exercise_service.dart';
@@ -16,7 +17,15 @@ void main() async {
     persistenceEnabled: false,
   );
 
-  // Seed exercises if collection is empty (ignore errors — rules may not yet allow)
+  // Auto-login
+  if (FirebaseAuth.instance.currentUser == null) {
+    await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: 'victor.z25@gmail.com',
+      password: 'j8swxp44',
+    );
+  }
+
+  // Seed exercises if collection is empty
   try {
     final exerciseSnapshot = await FirebaseFirestore.instance
         .collection('exercises')
@@ -25,9 +34,7 @@ void main() async {
     if (exerciseSnapshot.docs.isEmpty) {
       await ExerciseService().seedExercises();
     }
-  } catch (_) {
-    // Seeding will be retried on next launch
-  }
+  } catch (_) {}
 
   runApp(const ProviderScope(child: RunForgeApp()));
 }

@@ -1,26 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow authenticated users to read/write their own user document
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      match /{document=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-    }
-    // Exercises are public reference data — allow all reads
-    match /exercises/{exerciseId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-    // Allow authenticated users to read/write their own workouts
-    match /workouts/{workoutId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
-      match /{document=**} {
-        allow read, write: if request.auth != null;
-      }
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }
