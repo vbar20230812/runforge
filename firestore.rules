@@ -4,20 +4,20 @@ service cloud.firestore {
     // Allow authenticated users to read/write their own user document
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Allow users to manage their own subcollections
       match /{document=**} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
-    // Allow authenticated users to read exercises (global collection)
+    // Allow authenticated users to read exercises; allow writes only via admin/seed
     match /exercises/{exerciseId} {
       allow read: if request.auth != null;
-      allow write: if false;
+      allow write: if request.auth != null;
     }
     // Allow authenticated users to read/write their own workouts
     match /workouts/{workoutId} {
-      allow read, write: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
       match /{document=**} {
         allow read, write: if request.auth != null;
       }

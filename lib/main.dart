@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'data/services/exercise_service.dart';
 import 'router/app_router.dart';
 import 'firebase_options.dart';
 
@@ -11,10 +12,18 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Configure Firestore to suppress web console errors for permission-denied
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: false,
   );
+
+  // Seed exercises if collection is empty
+  final exerciseSnapshot = await FirebaseFirestore.instance
+      .collection('exercises')
+      .limit(1)
+      .get();
+  if (exerciseSnapshot.docs.isEmpty) {
+    await ExerciseService().seedExercises();
+  }
 
   runApp(const ProviderScope(child: RunForgeApp()));
 }
