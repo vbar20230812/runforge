@@ -19,7 +19,8 @@ class WorkoutService {
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => Workout.fromFirestore(doc))
-            .toList());
+            .toList())
+        .handleError((_) => <Workout>[]);
   }
 
   Future<List<Workout>> getWorkoutsForWeek(DateTime weekStart) async {
@@ -92,6 +93,7 @@ class WorkoutService {
         .collection('workouts')
         .doc(workoutId)
         .snapshots()
-        .map((doc) => doc.exists ? Workout.fromFirestore(doc) : null);
+        .map((doc) => doc.exists ? Workout.fromFirestore(doc) : null)
+        .handleError((_) => null);
   }
 }

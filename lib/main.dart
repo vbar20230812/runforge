@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +11,18 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const ProviderScope(child: RunForgeApp()));
+
+  // Suppress Firestore permission errors on web that get rethrown at zone level
+  runZonedGuarded(() {
+    runApp(const ProviderScope(child: RunForgeApp()));
+  }, (error, stackTrace) {
+    // Silently ignore Firestore permission-denied errors on web
+    final msg = error.toString();
+    if (msg.contains('permission-denied') || msg.contains('PERMISSION_DENIED')) {
+      return;
+    }
+    debugPrint('Unhandled error: $error');
+  });
 }
 
 class RunForgeApp extends StatelessWidget {
