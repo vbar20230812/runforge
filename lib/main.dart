@@ -16,13 +16,17 @@ void main() async {
     persistenceEnabled: false,
   );
 
-  // Seed exercises if collection is empty
-  final exerciseSnapshot = await FirebaseFirestore.instance
-      .collection('exercises')
-      .limit(1)
-      .get();
-  if (exerciseSnapshot.docs.isEmpty) {
-    await ExerciseService().seedExercises();
+  // Seed exercises if collection is empty (ignore errors — rules may not yet allow)
+  try {
+    final exerciseSnapshot = await FirebaseFirestore.instance
+        .collection('exercises')
+        .limit(1)
+        .get();
+    if (exerciseSnapshot.docs.isEmpty) {
+      await ExerciseService().seedExercises();
+    }
+  } catch (_) {
+    // Seeding will be retried on next launch
   }
 
   runApp(const ProviderScope(child: RunForgeApp()));
