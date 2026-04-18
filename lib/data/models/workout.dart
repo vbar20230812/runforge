@@ -10,7 +10,6 @@ class Workout {
   final int estimatedDurationMin;
   final int? actualDurationMin;
   final DateTime? completedAt;
-  final String? garminActivityId;
   final String? userNotes;
   final String? recommendationType;
   final String? recommendationReason;
@@ -26,7 +25,6 @@ class Workout {
     required this.estimatedDurationMin,
     this.actualDurationMin,
     this.completedAt,
-    this.garminActivityId,
     this.userNotes,
     this.recommendationType,
     this.recommendationReason,
@@ -47,7 +45,6 @@ class Workout {
       completedAt: data['completedAt'] != null
           ? (data['completedAt'] as Timestamp).toDate()
           : null,
-      garminActivityId: data['garminActivityId'],
       userNotes: data['userNotes'],
       recommendationType: data['recommendationType'],
       recommendationReason: data['recommendationReason'],
@@ -67,7 +64,6 @@ class Workout {
       'completedAt': completedAt != null
           ? Timestamp.fromDate(completedAt!)
           : null,
-      'garminActivityId': garminActivityId,
       'userNotes': userNotes,
       'recommendationType': recommendationType,
       'recommendationReason': recommendationReason,

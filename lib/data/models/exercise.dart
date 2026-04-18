@@ -9,6 +9,7 @@ class Exercise {
   final String movementType;
   final int difficulty;
   final bool isUnilateral;
+  final String? shortDescription;
   final String? instructions;
   final int boneDensityScore;
   final String? imageSource;
@@ -23,6 +24,7 @@ class Exercise {
     required this.movementType,
     required this.difficulty,
     this.isUnilateral = false,
+    this.shortDescription,
     this.instructions,
     this.boneDensityScore = 50,
     this.imageSource,
@@ -41,6 +43,7 @@ class Exercise {
       difficulty: data['difficulty'] ?? 1,
       isUnilateral: data['isUnilateral'] ?? false,
       instructions: data['instructions'],
+      shortDescription: data['shortDescription'],
       boneDensityScore: data['boneDensityScore'] ?? 50,
       imageSource: data['imageSource'],
       hasAnimation: data['hasAnimation'] ?? false,
@@ -58,6 +61,7 @@ class Exercise {
       'difficulty': difficulty,
       'isUnilateral': isUnilateral,
       'instructions': instructions,
+      'shortDescription': shortDescription,
       'boneDensityScore': boneDensityScore,
       'imageSource': imageSource,
       'hasAnimation': hasAnimation,

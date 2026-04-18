@@ -12,6 +12,7 @@ import '../features/settings/settings_page.dart';
 import '../features/settings/profile_edit_page.dart';
 import '../features/settings/training_preferences_page.dart';
 import '../features/settings/goal_settings_page.dart';
+import '../features/settings/exercise_types_page.dart';
 
 final appRouter = GoRouter(
   redirect: (context, state) {
@@ -88,6 +89,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/settings/goals',
       builder: (context, state) => const GoalSettingsPage(),
+    ),
+    GoRoute(
+      path: '/settings/exercises',
+      builder: (context, state) => const ExerciseTypesPage(),
     ),
   ],
 );

@@ -19,11 +19,6 @@ class UserProfile {
   final List<String> availableEquipment;
   final List<String> preferredRunDays;
 
-  // Garmin Integration
-  final bool garminConnected;
-  final String? garminUserId;
-  final DateTime? garminLastSync;
-
   UserProfile({
     required this.id,
     required this.email,
@@ -38,9 +33,6 @@ class UserProfile {
     this.runFrequency = 2,
     this.availableEquipment = const ['dumbbells'],
     this.preferredRunDays = const ['tuesday', 'thursday'],
-    this.garminConnected = false,
-    this.garminUserId,
-    this.garminLastSync,
   });
 
   factory UserProfile.fromFirestore(DocumentSnapshot doc) {
@@ -59,11 +51,6 @@ class UserProfile {
       runFrequency: data['runFrequency'] ?? 2,
       availableEquipment: List<String>.from(data['availableEquipment'] ?? []),
       preferredRunDays: List<String>.from(data['preferredRunDays'] ?? []),
-      garminConnected: data['garminConnected'] ?? false,
-      garminUserId: data['garminUserId'],
-      garminLastSync: data['garminLastSync'] != null
-          ? (data['garminLastSync'] as Timestamp).toDate()
-          : null,
     );
   }
 
@@ -82,11 +69,6 @@ class UserProfile {
       'runFrequency': runFrequency,
       'availableEquipment': availableEquipment,
       'preferredRunDays': preferredRunDays,
-      'garminConnected': garminConnected,
-      'garminUserId': garminUserId,
-      'garminLastSync': garminLastSync != null
-          ? Timestamp.fromDate(garminLastSync!)
-          : null,
     };
   }
 
@@ -116,9 +98,6 @@ class UserProfile {
       runFrequency: runFrequency ?? this.runFrequency,
       availableEquipment: availableEquipment ?? this.availableEquipment,
       preferredRunDays: preferredRunDays ?? this.preferredRunDays,
-      garminConnected: garminConnected,
-      garminUserId: garminUserId,
-      garminLastSync: garminLastSync,
     );
   }
 }

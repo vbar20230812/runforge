@@ -36,27 +36,38 @@ class _TrainingPreferencesPageState extends State<TrainingPreferencesPage> {
 
   Future<void> _loadPreferences() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return;
+    if (userId == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
 
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('settings')
-        .doc('preferences')
-        .get();
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('settings')
+          .doc('preferences')
+          .get();
 
-    if (mounted && doc.exists) {
-      final data = doc.data()!;
-      setState(() {
-        _sessionsPerWeek = data['sessionsPerWeek'] ?? 3;
-        _preferredTime = data['preferredTime'] ?? 'morning';
-        _availableEquipment = Set<String>.from(data['availableEquipment'] ?? []);
-        _isLoading = false;
-      });
-    } else if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted && doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          _sessionsPerWeek = data['sessionsPerWeek'] ?? 3;
+          _preferredTime = data['preferredTime'] ?? 'morning';
+          _availableEquipment = Set<String>.from(data['availableEquipment'] ?? []);
+          _isLoading = false;
+        });
+      } else if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

@@ -33,6 +33,17 @@ class SettingsPage extends StatelessWidget {
             },
           ),
           const Divider(),
+          _buildSectionHeader(context, 'Training'),
+          ListTile(
+            leading: const Icon(Icons.category),
+            title: const Text('Exercise Types'),
+            subtitle: const Text('Manage exercise categories'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              context.push('/settings/exercises');
+            },
+          ),
+          const Divider(),
           _buildSectionHeader(context, 'Goals'),
           ListTile(
             leading: const Icon(Icons.flag),
@@ -41,17 +52,6 @@ class SettingsPage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               context.push('/settings/goals');
-            },
-          ),
-          const Divider(),
-          _buildSectionHeader(context, 'Integrations'),
-          ListTile(
-            leading: const Icon(Icons.watch),
-            title: const Text('Garmin'),
-            subtitle: const Text('Not connected'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              _showGarminDialog(context);
             },
           ),
           const Divider(),
@@ -75,58 +75,6 @@ class SettingsPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-
-  void _showGarminDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.watch),
-            SizedBox(width: 8),
-            Text('Garmin Connection'),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Connect your Garmin device to sync workouts automatically.',
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Features:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text('• Automatic workout sync'),
-            Text('• Heart rate data'),
-            Text('• GPS tracking'),
-            Text('• Sleep data'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Garmin integration coming soon!'),
-                ),
-              );
-            },
-            icon: const Icon(Icons.link),
-            label: const Text('Connect'),
-          ),
         ],
       ),
     );

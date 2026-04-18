@@ -35,26 +35,37 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
   Future<void> _loadProfile() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return;
+    if (userId == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
 
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .get();
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
 
-    if (mounted && doc.exists) {
-      final data = doc.data()!;
-      setState(() {
-        _nameController.text = data['displayName'] ?? '';
-        _ageController.text = data['age']?.toString() ?? '';
-        _weightController.text = data['weightKg']?.toString() ?? '';
-        _heightController.text = data['heightCm']?.toString() ?? '';
-        _isLoading = false;
-      });
-    } else if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted && doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          _nameController.text = data['displayName'] ?? '';
+          _ageController.text = data['age']?.toString() ?? '';
+          _weightController.text = data['weightKg']?.toString() ?? '';
+          _heightController.text = data['heightCm']?.toString() ?? '';
+          _isLoading = false;
+        });
+      } else if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

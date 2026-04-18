@@ -30,7 +30,6 @@ class AuthService {
       'runFrequency': 2,
       'availableEquipment': ['dumbbells'],
       'preferredRunDays': ['tuesday', 'thursday'],
-      'garminConnected': false,
     });
 
     return credential;

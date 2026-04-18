@@ -46,27 +46,38 @@ class _GoalSettingsPageState extends State<GoalSettingsPage> {
 
   Future<void> _loadGoal() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return;
+    if (userId == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
 
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('settings')
-        .doc('goal')
-        .get();
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('settings')
+          .doc('goal')
+          .get();
 
-    if (mounted && doc.exists) {
-      final data = doc.data()!;
-      setState(() {
-        _goalType = data['goalType'] ?? '10k_time';
-        _goalTimeline = data['timeline'] ?? '3_months';
-        _goalValueController.text = data['goalValue']?.toString() ?? '';
-        _isLoading = false;
-      });
-    } else if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted && doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          _goalType = data['goalType'] ?? '10k_time';
+          _goalTimeline = data['timeline'] ?? '3_months';
+          _goalValueController.text = data['goalValue']?.toString() ?? '';
+          _isLoading = false;
+        });
+      } else if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

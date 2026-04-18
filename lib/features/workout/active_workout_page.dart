@@ -1,7 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/workout.dart';
 import '../../data/models/workout_exercise.dart';
+import '../../data/services/exercise_image_service.dart' show ExerciseImageService, ExerciseInfoResult;
+import '../../data/services/exercise_service.dart';
 import '../../data/services/workout_service.dart';
 
 class ActiveWorkoutPage extends StatefulWidget {
@@ -15,8 +18,13 @@ class ActiveWorkoutPage extends StatefulWidget {
 
 class _ActiveWorkoutPageState extends State<ActiveWorkoutPage> {
   final WorkoutService _workoutService = WorkoutService();
+  final ExerciseService _exerciseService = ExerciseService();
+  final ExerciseImageService _imageService = ExerciseImageService();
   Workout? _workout;
   List<WorkoutExercise> _exercises = [];
+  final Map<String, String?> _exerciseImages = {};
+  final Map<String, String> _exerciseNames = {};
+  final Map<String, String?> _exerciseDescriptions = {};
   int _currentExerciseIndex = 0;
   DateTime? _startTime;
   bool _isLoading = true;
@@ -31,10 +39,40 @@ class _ActiveWorkoutPageState extends State<ActiveWorkoutPage> {
     final workout = await _workoutService.workoutStream(widget.workoutId).first;
     final exercises = await _workoutService.getWorkoutExercises(widget.workoutId);
 
+    // Fetch images and names for all exercises
+    final imageFutures = <String, Future<ExerciseInfoResult?>>{};
+    for (final ex in exercises) {
+      final exercise = await _exerciseService.getExercise(ex.exerciseId);
+      if (exercise != null) {
+        _exerciseNames[ex.exerciseId] = exercise.name;
+        if (exercise.imageSource != null) {
+          _exerciseImages[ex.exerciseId] = exercise.imageSource;
+        }
+        if (exercise.shortDescription != null) {
+          _exerciseDescriptions[ex.exerciseId] = exercise.shortDescription;
+        }
+        if (exercise.imageSource == null) {
+          imageFutures[ex.exerciseId] = _imageService.getExerciseInfo(exercise.name);
+        }
+      }
+    }
+
+    // Resolve any API lookups
+    final results = await Future.wait(imageFutures.entries.map((e) async {
+      final info = await e.value;
+      return MapEntry(e.key, info);
+    }));
+
     if (mounted) {
       setState(() {
         _workout = workout;
         _exercises = exercises;
+        for (final entry in results) {
+          _exerciseImages[entry.key] = entry.value?.imageUrl;
+          if (entry.value?.shortDescription != null) {
+            _exerciseDescriptions[entry.key] = entry.value!.shortDescription!;
+          }
+        }
         _startTime = DateTime.now();
         _isLoading = false;
       });
@@ -182,18 +220,36 @@ class _ActiveWorkoutPageState extends State<ActiveWorkoutPage> {
               color: Theme.of(context).colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(60),
             ),
-            child: Icon(
-              Icons.fitness_center,
-              size: 48,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(60),
+              child: _exerciseImages[exercise.exerciseId] != null
+                  ? CachedNetworkImage(
+                      imageUrl: _exerciseImages[exercise.exerciseId]!,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => _buildPlaceholderIcon(48),
+                      errorWidget: (_, __, ___) => _buildPlaceholderIcon(48),
+                    )
+                  : _buildPlaceholderIcon(48),
             ),
           ),
           const SizedBox(height: 24),
           Text(
-            exercise.exerciseId,
+            _exerciseNames[exercise.exerciseId] ?? exercise.exerciseId,
             style: Theme.of(context).textTheme.headlineSmall,
             textAlign: TextAlign.center,
           ),
+          if (_exerciseDescriptions[exercise.exerciseId] != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _exerciseDescriptions[exercise.exerciseId]!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
           const SizedBox(height: 32),
           Card(
             child: Padding(
@@ -215,6 +271,14 @@ class _ActiveWorkoutPageState extends State<ActiveWorkoutPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPlaceholderIcon(double size) {
+    return Icon(
+      Icons.fitness_center,
+      size: size,
+      color: Theme.of(context).colorScheme.onPrimaryContainer,
     );
   }
 

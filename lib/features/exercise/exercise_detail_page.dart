@@ -1,6 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../data/models/exercise.dart';
 import '../../data/services/exercise_service.dart';
+import '../../data/services/exercise_image_service.dart';
 
 class ExerciseDetailPage extends StatefulWidget {
   final String exerciseId;
@@ -13,7 +15,10 @@ class ExerciseDetailPage extends StatefulWidget {
 
 class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
   final ExerciseService _exerciseService = ExerciseService();
+  final ExerciseImageService _imageService = ExerciseImageService();
   Exercise? _exercise;
+  String? _imageUrl;
+  String? _shortDescription;
   bool _isLoading = true;
 
   @override
@@ -24,9 +29,21 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
 
   Future<void> _loadExercise() async {
     final exercise = await _exerciseService.getExercise(widget.exerciseId);
+    String? imageUrl = exercise?.imageSource;
+    String? shortDescription = exercise?.shortDescription;
+
+    // If no stored imageSource or description, try fetching from free API
+    if (exercise != null && (imageUrl == null || shortDescription == null)) {
+      final info = await _imageService.getExerciseInfo(exercise.name);
+      imageUrl ??= info.imageUrl;
+      shortDescription ??= info.shortDescription;
+    }
+
     if (mounted) {
       setState(() {
         _exercise = exercise;
+        _imageUrl = imageUrl;
+        _shortDescription = shortDescription;
         _isLoading = false;
       });
     }
@@ -58,6 +75,10 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
+            if (_shortDescription != null) ...[
+              const SizedBox(height: 16),
+              _buildShortDescription(),
+            ],
             const SizedBox(height: 24),
             _buildMuscleInfo(),
             const SizedBox(height: 24),
@@ -83,10 +104,16 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
                 color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(
-                Icons.fitness_center,
-                size: 40,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: _imageUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: _imageUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => _buildPlaceholderIcon(),
+                        errorWidget: (_, __, ___) => _buildPlaceholderIcon(),
+                      )
+                    : _buildPlaceholderIcon(),
               ),
             ),
             const SizedBox(width: 16),
@@ -109,6 +136,14 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
     );
   }
 
+  Widget _buildPlaceholderIcon() {
+    return Icon(
+      Icons.fitness_center,
+      size: 40,
+      color: Theme.of(context).colorScheme.onPrimaryContainer,
+    );
+  }
+
   Widget _buildDifficultyIndicator() {
     return Row(
       children: [
@@ -124,6 +159,20 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
           );
         }),
       ],
+    );
+  }
+
+  Widget _buildShortDescription() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          _shortDescription!,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+      ),
     );
   }
 
