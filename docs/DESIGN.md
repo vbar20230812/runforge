@@ -1,23 +1,26 @@
 # RunForge — Running Personal Trainer
-## Design & Architecture Document v3.0
+## Design & Architecture Document v3.1
 
-**Version:** 3.0
-**Date:** March 3, 2026
-**Status:** Architecture Updated - Firebase + Flutter Serverless
-**Target Users:** ≤10 (personal/small group)
+**Version:** 3.1
+**Date:** April 18, 2026
+**Status:** Phase 1A Complete | Phase 1B–7 Not Started
+**Implementation Coverage:** ~15% of documented features exist in code
+**Target Users:** Single user (personal use, auto-login)
 
 ---
 
-## What's Changed in v3.0
+## What's Changed in v3.1
 
 | Change | Previous | Now |
 |--------|----------|-----|
 | **Frontend** | React + Vite | Flutter Web |
 | **Database** | PostgreSQL (Supabase) | Firestore (Firebase) |
 | **Backend** | Node.js + Express | **None** (Serverless) |
-| **Auth** | Supabase Auth | Firebase Auth |
+| **Auth** | Supabase Auth | Firebase Auth (auto-login, single user) |
 | **Hosting** | Vercel + Render | Firebase Hosting |
-| **Cost** | $0-53/mo | **$0/mo** (for ≤10 users) |
+| **Cost** | $0-53/mo | **$0/mo** (single user) |
+| **Garmin** | Planned (Phase 4) | **Removed from scope** |
+| **Multi-user** | ≤10 users | **Single user only** |
 
 ---
 
@@ -46,8 +49,7 @@
             │           FIREBASE                │
             │  ┌─────────┐  ┌────────────────┐  │
             │  │  Auth   │  │   Firestore    │  │
-            │  │ (Email, │  │  (NoSQL DB)    │  │
-            │  │ Google) │  │                │  │
+            │  │ (Email) │  │  (NoSQL DB)    │  │
             │  └─────────┘  └────────────────┘  │
             │  ┌─────────┐  ┌────────────────┐  │
             │  │ Storage │  │    Hosting     │  │
@@ -56,20 +58,66 @@
             └───────────────────────────────────┘
 
 **No backend server** - All logic runs client-side in Flutter
+**Single user** - Auto-login on app start, no signup flow needed
 **All data operations** via Firebase SDK directly from app
 ```
 
 ---
 
+## Current Implementation Status (as of April 18, 2026)
+
+### What Actually Exists
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Flutter project + Firebase init | Done | Web-only |
+| Auth (Email/Password) | Done | Auto-login with hardcoded creds (see Security section) |
+| UserProfile model | Done | Basic fields implemented |
+| Exercise model | Done | Only 10 exercises seeded (doc specifies 37+) |
+| Workout + WorkoutExercise models | Done | Basic fields implemented |
+| ExerciseService | Done | Queries work, images via wger.de API |
+| WorkoutService | Done | CRUD + date-range queries (requires composite index) |
+| AuthService | Done | signUp, signIn, signOut, getUserProfile |
+| Calendar page | Partial | Month view only, basic workout markers |
+| Dashboard page | Skeleton | Static placeholder cards |
+| Settings pages | Partial | Profile edit, training prefs, goal settings |
+
+### Critical Known Issues
+
+1. **SECURITY: Firestore rules are wide open** — deployed rules are `allow read, write: if true` (see Section 8)
+2. **SECURITY: Hardcoded credentials** in `main.dart` — email/password in source code
+3. **Riverpod imported but unused** — all state is local `setState`, no providers exist
+4. **No workout generator** — exercises are hardcoded static lists, not algorithmically generated
+
+### What Does NOT Exist Yet
+
+All of the following are documented below but **not implemented**:
+- Training goals model and management
+- Workout generator algorithm (superset pairing, periodization, bone density scoring)
+- Weekly plan generator
+- Injury risk calculator (ACWR, muscle imbalance detection)
+- Progress snapshots and progress charts
+- Personal records tracking
+- Garmin integration (removed from scope)
+- Recommendation engine
+- Muscle impact visualization
+- Workout player (superset tracking, rest timer)
+- `lib/logic/` directory (entire business logic layer)
+- `lib/data/repositories/` directory
+- `lib/shared/` directory
+
+> **Note:** The legacy `docs/RunForge-Design-Document.md` (v1.0, React/PostgreSQL architecture) is superseded by this document. It should be archived or deleted to avoid confusion.
+
+---
+
 ## 1. Product Vision
 
-RunForge is a web-based personal training application purpose-built for runners targeting a 10K PR. It combines AI-generated superset strength workouts with structured running plans, visualized on a training calendar with Garmin Forerunner device synchronization.
+RunForge is a web-based personal training application purpose-built for runners targeting a 10K PR. It combines superset strength workouts with structured running plans, visualized on a training calendar.
 
 ### 1.1 Target User Profile
 
 - Intermediate runners (able to complete 10K, aiming to improve time)
 - Age range: 30–55, health-conscious
-- Has a Garmin Forerunner series watch
 - Wants efficient gym sessions (20–35 min) using supersets
 - Runs 2–3 times per week, strength trains 3–5 times per week
 
@@ -78,17 +126,17 @@ RunForge is a web-based personal training application purpose-built for runners 
 | # | Goal | Metric |
 |---|------|--------|
 | G1 | Goal-oriented training | All workouts drive toward user's specific goal |
-| G2 | Improve 10K time | Pace progression tracked from Garmin data |
+| G2 | Improve 10K time | Pace progression tracked from logged run data |
 | G3 | Prevent injury | Balanced muscle loading + injury risk monitoring |
 | G4 | Maximize gym efficiency | Superset-based workouts under 35 min |
 | G5 | Workout variety | No repeated workout in a 4-week cycle |
-| G6 | Seamless device sync | Garmin Forerunner sync |
+| G6 | ~~Seamless device sync~~ | ~~Removed from scope~~ |
 | G7 | Increase bone density | Prioritize high-impact + heavy-load exercises |
 | G8 | Track progress | Visual progress charts, PR tracking |
 
 ### 1.3 Default Goal
 
-**Every user starts with a default goal: Maintain 10K under 1 hour (60 minutes)**
+**Default goal: Maintain 10K under 1 hour (60 minutes)**
 
 ---
 
@@ -100,7 +148,7 @@ RunForge is a web-based personal training application purpose-built for runners 
 |-----------|------------|---------|
 | **Framework** | Flutter 3.x | Cross-platform UI framework |
 | **Language** | Dart | Type-safe, compiled language |
-| **State Management** | Riverpod or Provider | Reactive state management |
+| **State Management** | Riverpod or Provider | Reactive state management (**NOTE:** Riverpod is imported but unused — all pages use `setState` directly) |
 | **Routing** | GoRouter | Declarative routing |
 | **Charts** | fl_chart | Progress visualizations |
 | **Calendar** | table_calendar | Training calendar |
@@ -109,7 +157,7 @@ RunForge is a web-based personal training application purpose-built for runners 
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Authentication** | Firebase Auth | Email/password, Google sign-in |
+| **Authentication** | Firebase Auth | Email/password, auto-login (single user) |
 | **Database** | Cloud Firestore | NoSQL document database |
 | **Storage** | Firebase Storage | Exercise images/animations |
 | **Hosting** | Firebase Hosting | Web app deployment |
@@ -120,8 +168,8 @@ RunForge is a web-based personal training application purpose-built for runners 
 |--------|-------------------|
 | **Flutter vs React** | You already know Flutter (assetflow3); single codebase for web/mobile |
 | **Firestore vs SQL** | Simpler for small user base; real-time sync built-in |
-| **No Backend** | ≤10 users = no need for server; Firebase SDK handles everything |
-| **Cost** | Entire stack is **free** for this user scale |
+| **No Backend** | Single-user personal app; Firebase SDK handles everything directly |
+| **Cost** | Entire stack is **free** for this user scale (**NOTE:** Real-time `snapshots()` listeners consume reads continuously; 37+ exercise images may exceed Storage free tier) |
 
 ---
 
@@ -191,11 +239,6 @@ class UserProfile {
   final List<String> availableEquipment;
   final List<String> preferredRunDays;
 
-  // Garmin Integration
-  final bool garminConnected;
-  final String? garminUserId;
-  final DateTime? garminLastSync;
-
   UserProfile({
     required this.id,
     required this.email,
@@ -210,9 +253,6 @@ class UserProfile {
     this.runFrequency = 2,
     this.availableEquipment = const ['dumbbells'],
     this.preferredRunDays = const ['tuesday', 'thursday'],
-    this.garminConnected = false,
-    this.garminUserId,
-    this.garminLastSync,
   });
 
   factory UserProfile.fromFirestore(DocumentSnapshot doc) {
@@ -231,11 +271,6 @@ class UserProfile {
       runFrequency: data['runFrequency'] ?? 2,
       availableEquipment: List<String>.from(data['availableEquipment'] ?? []),
       preferredRunDays: List<String>.from(data['preferredRunDays'] ?? []),
-      garminConnected: data['garminConnected'] ?? false,
-      garminUserId: data['garminUserId'],
-      garminLastSync: data['garminLastSync'] != null
-          ? (data['garminLastSync'] as Timestamp).toDate()
-          : null,
     );
   }
 
@@ -253,11 +288,6 @@ class UserProfile {
       'runFrequency': runFrequency,
       'availableEquipment': availableEquipment,
       'preferredRunDays': preferredRunDays,
-      'garminConnected': garminConnected,
-      'garminUserId': garminUserId,
-      'garminLastSync': garminLastSync != null
-          ? Timestamp.fromDate(garminLastSync!)
-          : null,
     };
   }
 }
@@ -356,7 +386,6 @@ class Workout {
   final int? actualDurationMin;
 
   final DateTime? completedAt;
-  final String? garminActivityId;
   final String? userNotes;
 
   final String? recommendationType;
@@ -374,7 +403,6 @@ class Workout {
     required this.estimatedDurationMin,
     this.actualDurationMin,
     this.completedAt,
-    this.garminActivityId,
     this.userNotes,
     this.recommendationType,
     this.recommendationReason,
@@ -491,7 +519,7 @@ class InjuryRiskAssessment {
   final DateTime assessmentDate;
 
   final int riskScore;             // 0-100
-  final String riskLevel;          // 'low', 'moderate', 'high', 'very_high'
+  final String riskLevel;          // 'low', 'moderate', 'high' (see _determineRiskLevel)
 
   final int? loadSpikeScore;
   final int? muscleImbalanceScore;
@@ -640,8 +668,7 @@ lib/
 │   └── settings/
 │       ├── settings_page.dart
 │       ├── profile_form.dart
-│       ├── preferences_form.dart
-│       └── integrations_page.dart
+│       └── preferences_form.dart
 │
 ├── shared/                         # Shared widgets
 │   ├── widgets/
@@ -664,7 +691,9 @@ lib/
 
 ## 5. Firebase Services
 
-### 5.1 Auth Service
+### 5.1 Auth Service (Single User - Auto Login)
+
+> The app uses a single Firebase Auth account. No signup flow is needed — the user is auto-logged in on app start with stored credentials. The `signUp` method exists only for initial account creation.
 
 ```dart
 // lib/data/services/auth_service.dart
@@ -678,6 +707,17 @@ class AuthService {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
 
+  /// Auto-login with stored credentials on app start.
+  /// Called from main.dart before runApp().
+  Future<void> autoLogin({
+    required String email,
+    required String password,
+  }) async {
+    if (_auth.currentUser != null) return; // Already logged in
+    await _auth.signInWithEmailAndPassword(email: email, password: password);
+  }
+
+  /// One-time account creation (run manually, not in app flow).
   Future<UserCredential> signUp({
     required String email,
     required String password,
@@ -688,7 +728,6 @@ class AuthService {
       password: password,
     );
 
-    // Create user profile
     await _firestore.collection('users').doc(credential.user!.uid).set({
       'id': credential.user!.uid,
       'email': email,
@@ -699,20 +738,9 @@ class AuthService {
       'runFrequency': 2,
       'availableEquipment': ['dumbbells'],
       'preferredRunDays': ['tuesday', 'thursday'],
-      'garminConnected': false,
     });
 
     return credential;
-  }
-
-  Future<UserCredential> signIn({
-    required String email,
-    required String password,
-  }) async {
-    return await _auth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
   }
 
   Future<void> signOut() async {
@@ -823,6 +851,8 @@ class ExerciseService {
 ---
 
 ## 6. Workout Generation Algorithm
+
+> **NOT IMPLEMENTED.** The `lib/logic/` directory does not exist. Workouts currently use hardcoded static exercise lists. The algorithm below is the **target design**.
 
 ### 6.1 Core Generator
 
@@ -998,6 +1028,8 @@ class WeeklyPlanGenerator {
 
 ## 7. Injury Risk Calculation
 
+> **NOT IMPLEMENTED.** No injury risk code exists. The calculator below is the **target design**.
+
 ```dart
 // lib/logic/injury_risk_calculator.dart
 class InjuryRiskCalculator {
@@ -1114,104 +1146,69 @@ class InjuryRiskCalculator {
 
 ## 8. Firestore Security Rules
 
+> **Simple rules for a single-user personal app.** Only requirement: must be authenticated. No per-document ownership checks needed since there's only one user.
+
 ```javascript
 // firestore.rules
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Users - can only access own data
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Training Goals - user owns their goals
-    match /training_goals/{goalId} {
-      allow read, write: if request.auth != null &&
-        resource.data.userId == request.auth.uid;
-    }
-
-    // Exercises catalog - read only for authenticated users
-    match /exercises/{exerciseId} {
-      allow read: if request.auth != null;
-      allow write: if false;  // Managed via Firebase Console
-    }
-
-    // Weekly Plans - user owns their plans
-    match /weekly_plans/{planId} {
-      allow read, write: if request.auth != null &&
-        resource.data.userId == request.auth.uid;
-    }
-
-    // Workouts - user owns their workouts
-    match /workouts/{workoutId} {
-      allow read, write: if request.auth != null &&
-        resource.data.userId == request.auth.uid;
-
-      // Workout exercises subcollection
-      match /exercises/{exerciseLogId} {
-        allow read, write: if request.auth != null;
-      }
-    }
-
-    // Progress Snapshots - user owns their data
-    match /progress_snapshots/{snapshotId} {
-      allow read, write: if request.auth != null &&
-        resource.data.userId == request.auth.uid;
-    }
-
-    // Injury Risk Assessments - user owns their data
-    match /injury_risk_assessments/{assessmentId} {
-      allow read, write: if request.auth != null &&
-        resource.data.userId == request.auth.uid;
-    }
-
-    // Personal Records - user owns their records
-    match /personal_records/{recordId} {
-      allow read, write: if request.auth != null &&
-        resource.data.userId == request.auth.uid;
+    // Single-user app: any authenticated user can read/write everything
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
 ```
 
+> **NOTE:** The previous per-collection rules with `request.auth.uid` ownership checks were over-engineered for a single-user app. If the app ever goes multi-user, revisit this.
+
+---
+
+## 8.5 Required Firestore Indexes
+
+The following composite indexes are required for the queries in this design. Firestore does **not** create these automatically.
+
+| Collection | Fields | Query Using It |
+|------------|--------|----------------|
+| `workouts` | `userId` (ASC), `scheduledDate` (ASC) | `getWorkoutsByDateRange()` |
+| `training_goals` | `userId` (ASC), `status` (ASC) | Active goals query |
+| `progress_snapshots` | `userId` (ASC), `snapshotDate` (DESC) | Recent snapshots query |
+
+Create in Firebase Console → Firestore → Indexes, or Firestore will auto-prompt on first failed query.
+
 ---
 
 ## 9. Implementation Phases
 
-| Phase | What to Build | Time | Priority |
-|-------|---------------|------|----------|
-| **1A** | Flutter project, Firebase setup, auth | Week 1 | HIGH |
-| **1B** | Exercise catalog, workout generator | Week 2 | HIGH |
-| **1C** | Calendar view, workout display | Week 3 | HIGH |
-| **2** | Running workouts, muscle visualization | Weeks 4-5 | HIGH |
-| **3** | Workout player, tracking | Weeks 5-6 | MEDIUM |
-| **4** | Garmin integration | Weeks 7-8 | MEDIUM |
-| **5** | Progress tracking, charts | Weeks 9-10 | MEDIUM |
-| **6** | Injury prevention system | Weeks 11-12 | LOW |
-| **7** | Smart recommendations | Weeks 13-14 | LOW |
+| Phase | What to Build | Time | Priority | Status |
+|-------|---------------|------|----------|--------|
+| **1A** | Flutter project, Firebase setup, auth | Week 1 | HIGH | DONE |
+| **1B** | Exercise catalog, workout generator | Week 2 | HIGH | NOT STARTED |
+| **1C** | Calendar view, workout display | Week 3 | HIGH | PARTIAL (month view only) |
+| **2** | Running workouts, muscle visualization | Weeks 4-5 | HIGH | NOT STARTED |
+| **3** | Workout player, tracking | Weeks 5-6 | MEDIUM | NOT STARTED |
+| **4** | ~~Garmin integration~~ | ~~Weeks 7-8~~ | ~~MEDIUM~~ | REMOVED FROM SCOPE |
+| **5** | Progress tracking, charts | Weeks 9-10 | MEDIUM | NOT STARTED |
+| **6** | Injury prevention system | Weeks 11-12 | LOW | NOT STARTED |
+| **7** | Smart recommendations | Weeks 13-14 | LOW | NOT STARTED |
 
 ---
 
 ## 10. Cost Estimate
 
-### For ≤10 Users
+### Single User (Personal App)
 
 | Service | Usage | Free Tier | Monthly Cost |
 |---------|-------|-----------|--------------|
 | **Firestore** | <500MB, <50K reads/day | ✅ Free | $0 |
-| **Firebase Auth** | <10 users | ✅ Free | $0 |
+| **Firebase Auth** | 1 user | ✅ Free | $0 |
 | **Firebase Hosting** | <10GB bandwidth | ✅ Free | $0 |
 | **Firebase Storage** | <5GB | ✅ Free | $0 |
 | **TOTAL** | | | **$0/month** |
 
-### Scaling (If Needed)
-
-| Users | Firestore | Hosting | Total |
-|-------|-----------|---------|-------|
-| ≤10 | Free | Free | **$0** |
-| 10-100 | ~$5 | Free | ~$5 |
-| 100-1000 | ~$25 | ~$10 | ~$35 |
+> **Watch out:** Real-time `snapshots()` listeners consume reads continuously. Monitor usage in Firebase Console if queries feel slow.
+> **NOTE:** `firebase_storage` is listed in `pubspec.yaml` but never imported or used anywhere in the codebase. Remove if not needed, or use it for exercise images.
 
 ---
 
@@ -1239,37 +1236,38 @@ firebase deploy --only hosting
 ### Firebase Console Setup
 
 1. Create Firebase project at https://console.firebase.google.com
-2. Enable Authentication (Email/Password, Google)
+2. Enable Authentication (Email/Password only)
 3. Create Firestore database (start in test mode)
 4. Enable Storage
 5. Register web app and copy config
-6. Set up security rules
+6. Deploy security rules from Section 8
 
 ---
 
 ## 12. Key Files to Create First
 
 ### Phase 1A Checklist:
-- [ ] `lib/main.dart` - App entry point
-- [ ] `lib/firebase_options.dart` - Firebase config
-- [ ] `lib/data/services/auth_service.dart`
+- [x] `lib/main.dart` - App entry point
+- [x] `lib/firebase_options.dart` - Firebase config
+- [x] `lib/data/services/auth_service.dart`
 - [ ] `lib/data/services/user_service.dart`
-- [ ] `lib/data/models/user_profile.dart`
-- [ ] `lib/features/auth/auth_page.dart`
-- [ ] `lib/features/dashboard/dashboard_page.dart`
-- [ ] `lib/router/app_router.dart`
+- [x] `lib/data/models/user_profile.dart`
+- [x] `lib/features/auth/auth_page.dart`
+- [x] `lib/features/dashboard/dashboard_page.dart`
+- [x] `lib/router/app_router.dart`
 
 ### Phase 1B Checklist:
-- [ ] `lib/data/models/exercise.dart`
-- [ ] `lib/data/models/workout.dart`
-- [ ] `lib/data/services/exercise_service.dart`
-- [ ] `lib/data/services/workout_service.dart`
+- [x] `lib/data/models/exercise.dart`
+- [x] `lib/data/models/workout.dart`
+- [x] `lib/data/services/exercise_service.dart`
+- [x] `lib/data/services/workout_service.dart`
 - [ ] `lib/logic/workout_generator.dart`
-- [ ] `lib/features/calendar/calendar_page.dart`
-- [ ] Seed exercises to Firestore
+- [x] `lib/features/calendar/calendar_page.dart` (month view only)
+- [x] Seed exercises to Firestore (10 of 37+ done)
 
 ---
 
-*Last updated: March 3, 2026*
-*Architecture: Flutter + Firebase (Serverless)*
-*Target: ≤10 users, $0/month*
+*Last updated: April 18, 2026*
+*Architecture: Flutter + Firebase (Serverless, single user)*
+*Target: Personal use, $0/month*
+*Note: `docs/RunForge-Design-Document.md` (v1.0) is superseded — should be archived*
