@@ -28,24 +28,28 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
   }
 
   Future<void> _loadExercise() async {
-    final exercise = await _exerciseService.getExercise(widget.exerciseId);
-    String? imageUrl = exercise?.imageSource;
-    String? shortDescription = exercise?.shortDescription;
+    try {
+      final exercise = await _exerciseService.getExercise(widget.exerciseId);
+      String? imageUrl = exercise?.imageSource;
+      String? shortDescription = exercise?.shortDescription;
 
-    // If no stored imageSource or description, try fetching from free API
-    if (exercise != null && (imageUrl == null || shortDescription == null)) {
-      final info = await _imageService.getExerciseInfo(exercise.name);
-      imageUrl ??= info.imageUrl;
-      shortDescription ??= info.shortDescription;
-    }
+      // If no stored imageSource or description, try fetching from free API
+      if (exercise != null && (imageUrl == null || shortDescription == null)) {
+        final info = await _imageService.getExerciseInfo(exercise.name);
+        imageUrl ??= info.imageUrl;
+        shortDescription ??= info.shortDescription;
+      }
 
-    if (mounted) {
-      setState(() {
-        _exercise = exercise;
-        _imageUrl = imageUrl;
-        _shortDescription = shortDescription;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _exercise = exercise;
+          _imageUrl = imageUrl;
+          _shortDescription = shortDescription;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

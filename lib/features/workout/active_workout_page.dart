@@ -36,6 +36,7 @@ class _ActiveWorkoutPageState extends State<ActiveWorkoutPage> {
   }
 
   Future<void> _loadWorkout() async {
+    try {
     final workout = await _workoutService.workoutStream(widget.workoutId).first;
     final exercises = await _workoutService.getWorkoutExercises(widget.workoutId);
 
@@ -76,6 +77,9 @@ class _ActiveWorkoutPageState extends State<ActiveWorkoutPage> {
         _startTime = DateTime.now();
         _isLoading = false;
       });
+    }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

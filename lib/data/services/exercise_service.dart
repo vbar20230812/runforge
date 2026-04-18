@@ -5,10 +5,14 @@ class ExerciseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<List<Exercise>> getAllExercises() async {
+    try {
     final snapshot = await _firestore.collection('exercises').get();
     return snapshot.docs
         .map((doc) => Exercise.fromFirestore(doc))
         .toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   Stream<List<Exercise>> exercisesStream() {
@@ -17,10 +21,12 @@ class ExerciseService {
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => Exercise.fromFirestore(doc))
-            .toList());
+            .toList())
+        .handleError((_) => <Exercise>[]);
   }
 
   Future<List<Exercise>> getExercisesByEquipment(List<String> equipment) async {
+    try {
     final snapshot = await _firestore
         .collection('exercises')
         .where('equipment', whereIn: equipment)
@@ -29,9 +35,13 @@ class ExerciseService {
     return snapshot.docs
         .map((doc) => Exercise.fromFirestore(doc))
         .toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   Future<List<Exercise>> getExercisesByMuscleGroup(String muscleGroup) async {
+    try {
     final snapshot = await _firestore
         .collection('exercises')
         .where('primaryMuscles', arrayContains: muscleGroup)
@@ -40,14 +50,21 @@ class ExerciseService {
     return snapshot.docs
         .map((doc) => Exercise.fromFirestore(doc))
         .toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   Future<Exercise?> getExercise(String exerciseId) async {
+    try {
     final doc = await _firestore.collection('exercises').doc(exerciseId).get();
     if (doc.exists) {
       return Exercise.fromFirestore(doc);
     }
     return null;
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<void> seedExercises() async {

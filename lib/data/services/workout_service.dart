@@ -26,6 +26,7 @@ class WorkoutService {
     final userId = _firestore.app.options.projectId;
     final weekEnd = weekStart.add(const Duration(days: 6));
 
+    try {
     final snapshot = await _firestore
         .collection('workouts')
         .where('userId', isEqualTo: userId)
@@ -35,6 +36,9 @@ class WorkoutService {
         .get();
 
     return snapshot.docs.map((doc) => Workout.fromFirestore(doc)).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   Future<String> createWorkout(Workout workout) async {
@@ -67,6 +71,7 @@ class WorkoutService {
   }
 
   Future<List<WorkoutExercise>> getWorkoutExercises(String workoutId) async {
+    try {
     final snapshot = await _firestore
         .collection('workouts')
         .doc(workoutId)
@@ -77,6 +82,9 @@ class WorkoutService {
     return snapshot.docs
         .map((doc) => WorkoutExercise.fromFirestore(doc))
         .toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   Stream<Workout?> workoutStream(String workoutId) {

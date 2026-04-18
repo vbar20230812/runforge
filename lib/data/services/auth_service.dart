@@ -51,9 +51,13 @@ class AuthService {
 
   Future<UserProfile?> getUserProfile() async {
     if (userId == null) return null;
-    final doc = await _firestore.collection('users').doc(userId).get();
-    if (!doc.exists) return null;
-    return UserProfile.fromFirestore(doc);
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (!doc.exists) return null;
+      return UserProfile.fromFirestore(doc);
+    } catch (e) {
+      return null;
+    }
   }
 
   Stream<UserProfile?> userProfileStream() {
@@ -62,7 +66,8 @@ class AuthService {
         .collection('users')
         .doc(userId)
         .snapshots()
-        .map((doc) => doc.exists ? UserProfile.fromFirestore(doc) : null);
+        .map((doc) => doc.exists ? UserProfile.fromFirestore(doc) : null)
+        .handleError((_) => null);
   }
 
   Future<void> updateProfile(Map<String, dynamic> data) async {

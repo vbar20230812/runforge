@@ -46,6 +46,8 @@ class _CalendarPageState extends State<CalendarPage> {
         _workoutEvents = events;
         _updateSelectedDayWorkouts();
       });
+    }, onError: (e) {
+      // Firestore permission errors are handled silently
     });
   }
 
@@ -77,6 +79,9 @@ class _CalendarPageState extends State<CalendarPage> {
                 _focusedDay = focusedDay;
                 _updateSelectedDayWorkouts();
               });
+            },
+            onFormatChanged: (format) {
+              setState(() {});
             },
             eventLoader: (day) {
               final date = DateTime.utc(day.year, day.month, day.day);
