@@ -7,6 +7,18 @@ import '../../data/services/exercise_image_service.dart' show ExerciseImageServi
 import '../../data/services/exercise_service.dart';
 import '../../data/services/workout_service.dart';
 
+/// A group of exercises performed together. Solo = 1 exercise, superset = 2.
+class _ExerciseGroup {
+  final List<WorkoutExercise> exercises;
+  final bool isSuperset;
+
+  _ExerciseGroup({required this.exercises})
+      : isSuperset = exercises.length > 1;
+
+  WorkoutExercise get first => exercises.first;
+  WorkoutExercise? get second => isSuperset ? exercises[1] : null;
+}
+
 class ActiveWorkoutPage extends StatefulWidget {
   final String workoutId;
 
@@ -21,11 +33,11 @@ class _ActiveWorkoutPageState extends State<ActiveWorkoutPage> {
   final ExerciseService _exerciseService = ExerciseService();
   final ExerciseImageService _imageService = ExerciseImageService();
   Workout? _workout;
-  List<WorkoutExercise> _exercises = [];
+  List<_ExerciseGroup> _groups = [];
   final Map<String, String?> _exerciseImages = {};
   final Map<String, String> _exerciseNames = {};
   final Map<String, String?> _exerciseDescriptions = {};
-  int _currentExerciseIndex = 0;
+  int _currentGroupIndex = 0;
   DateTime? _startTime;
   bool _isLoading = true;
 
@@ -37,64 +49,89 @@ class _ActiveWorkoutPageState extends State<ActiveWorkoutPage> {
 
   Future<void> _loadWorkout() async {
     try {
-    final workout = await _workoutService.workoutStream(widget.workoutId).first;
-    final exercises = await _workoutService.getWorkoutExercises(widget.workoutId);
+      final workout = await _workoutService.workoutStream(widget.workoutId).first;
+      final exercises = await _workoutService.getWorkoutExercises(widget.workoutId);
 
-    // Fetch images and names for all exercises
-    final imageFutures = <String, Future<ExerciseInfoResult?>>{};
-    for (final ex in exercises) {
-      final exercise = await _exerciseService.getExercise(ex.exerciseId);
-      if (exercise != null) {
-        _exerciseNames[ex.exerciseId] = exercise.name;
-        if (exercise.imageSource != null) {
-          _exerciseImages[ex.exerciseId] = exercise.imageSource;
-        }
-        if (exercise.shortDescription != null) {
-          _exerciseDescriptions[ex.exerciseId] = exercise.shortDescription;
-        }
-        if (exercise.imageSource == null) {
-          imageFutures[ex.exerciseId] = _imageService.getExerciseInfo(exercise.name);
-        }
-      }
-    }
-
-    // Resolve any API lookups
-    final results = await Future.wait(imageFutures.entries.map((e) async {
-      final info = await e.value;
-      return MapEntry(e.key, info);
-    }));
-
-    if (mounted) {
-      setState(() {
-        _workout = workout;
-        _exercises = exercises;
-        for (final entry in results) {
-          _exerciseImages[entry.key] = entry.value?.imageUrl;
-          if (entry.value?.shortDescription != null) {
-            _exerciseDescriptions[entry.key] = entry.value!.shortDescription!;
+      // Fetch images and names for all exercises
+      final imageFutures = <String, Future<ExerciseInfoResult?>>{};
+      for (final ex in exercises) {
+        final exercise = await _exerciseService.getExercise(ex.exerciseId);
+        if (exercise != null) {
+          _exerciseNames[ex.exerciseId] = exercise.name;
+          if (exercise.imageSource != null) {
+            _exerciseImages[ex.exerciseId] = exercise.imageSource;
+          }
+          if (exercise.shortDescription != null) {
+            _exerciseDescriptions[ex.exerciseId] = exercise.shortDescription;
+          }
+          if (exercise.imageSource == null) {
+            imageFutures[ex.exerciseId] = _imageService.getExerciseInfo(exercise.name);
           }
         }
-        _startTime = DateTime.now();
-        _isLoading = false;
-      });
-    }
+      }
+
+      // Resolve any API lookups
+      final results = await Future.wait(imageFutures.entries.map((e) async {
+        final info = await e.value;
+        return MapEntry(e.key, info);
+      }));
+
+      if (mounted) {
+        setState(() {
+          _workout = workout;
+          _groups = _buildGroups(exercises);
+          for (final entry in results) {
+            _exerciseImages[entry.key] = entry.value?.imageUrl;
+            if (entry.value?.shortDescription != null) {
+              _exerciseDescriptions[entry.key] = entry.value!.shortDescription!;
+            }
+          }
+          _startTime = DateTime.now();
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _nextExercise() {
-    if (_currentExerciseIndex < _exercises.length - 1) {
+  List<_ExerciseGroup> _buildGroups(List<WorkoutExercise> exercises) {
+    final groups = <_ExerciseGroup>[];
+    final paired = <String>{};
+
+    for (final exercise in exercises) {
+      if (exercise.supersetPairId != null && !paired.contains(exercise.supersetPairId)) {
+        final partner = exercises.firstWhere(
+          (e) => e.supersetPairId == exercise.supersetPairId && e.id != exercise.id,
+          orElse: () => exercise,
+        );
+        if (partner.id != exercise.id) {
+          paired.add(exercise.supersetPairId!);
+          final pair = [exercise, partner]..sort((a, b) => a.order.compareTo(b.order));
+          groups.add(_ExerciseGroup(exercises: pair));
+          continue;
+        }
+      }
+      if (exercise.supersetPairId == null || !paired.contains(exercise.supersetPairId)) {
+        groups.add(_ExerciseGroup(exercises: [exercise]));
+      }
+    }
+
+    return groups;
+  }
+
+  void _nextGroup() {
+    if (_currentGroupIndex < _groups.length - 1) {
       setState(() {
-        _currentExerciseIndex++;
+        _currentGroupIndex++;
       });
     }
   }
 
-  void _previousExercise() {
-    if (_currentExerciseIndex > 0) {
+  void _previousGroup() {
+    if (_currentGroupIndex > 0) {
       setState(() {
-        _currentExerciseIndex--;
+        _currentGroupIndex--;
       });
     }
   }
@@ -161,8 +198,8 @@ class _ActiveWorkoutPageState extends State<ActiveWorkoutPage> {
       );
     }
 
-    final currentExercise = _exercises.isNotEmpty && _currentExerciseIndex < _exercises.length
-        ? _exercises[_currentExerciseIndex]
+    final currentGroup = _groups.isNotEmpty && _currentGroupIndex < _groups.length
+        ? _groups[_currentGroupIndex]
         : null;
 
     return PopScope(
@@ -187,8 +224,10 @@ class _ActiveWorkoutPageState extends State<ActiveWorkoutPage> {
           children: [
             _buildProgressIndicator(),
             Expanded(
-              child: currentExercise != null
-                  ? _buildExerciseContent(currentExercise)
+              child: currentGroup != null
+                  ? (currentGroup.isSuperset
+                      ? _buildSupersetContent(currentGroup)
+                      : _buildExerciseContent(currentGroup.first))
                   : _buildNoExercisesContent(),
             ),
             _buildControls(),
@@ -200,7 +239,7 @@ class _ActiveWorkoutPageState extends State<ActiveWorkoutPage> {
 
   Widget _buildProgressIndicator() {
     return LinearProgressIndicator(
-      value: _exercises.isEmpty ? 0 : (_currentExerciseIndex + 1) / _exercises.length,
+      value: _groups.isEmpty ? 0 : (_currentGroupIndex + 1) / _groups.length,
     );
   }
 
@@ -211,7 +250,7 @@ class _ActiveWorkoutPageState extends State<ActiveWorkoutPage> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            'Exercise ${_currentExerciseIndex + 1} of ${_exercises.length}',
+            'Exercise ${_currentGroupIndex + 1} of ${_groups.length}',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -277,6 +316,174 @@ class _ActiveWorkoutPageState extends State<ActiveWorkoutPage> {
       ),
     );
   }
+
+  // ── Superset UI ──
+
+  Widget _buildSupersetContent(_ExerciseGroup group) {
+    final exA = group.first;
+    final exB = group.second!;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            'Block ${_currentGroupIndex + 1} of ${_groups.length}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 12),
+          // Superset badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.tertiaryContainer,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.bolt, size: 18,
+                    color: Theme.of(context).colorScheme.onTertiaryContainer),
+                const SizedBox(width: 6),
+                Text('SUPERSET',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.onTertiaryContainer,
+                          fontWeight: FontWeight.bold,
+                        )),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Alternating set guide
+          Text(
+            'Alternate: Set 1 of A, then Set 1 of B, etc.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 16),
+          // Exercise A
+          _buildSupersetExerciseCard(exA, 'A'),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Icon(Icons.swap_vert,
+                color: Theme.of(context).colorScheme.outline),
+          ),
+          // Exercise B
+          _buildSupersetExerciseCard(exB, 'B'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSupersetExerciseCard(WorkoutExercise exercise, String label) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Image + name row
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: _exerciseImages[exercise.exerciseId] != null
+                        ? CachedNetworkImage(
+                            imageUrl: _exerciseImages[exercise.exerciseId]!,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => _buildPlaceholderIcon(24),
+                            errorWidget: (_, __, ___) => _buildPlaceholderIcon(24),
+                          )
+                        : _buildPlaceholderIcon(24),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(label,
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                      fontWeight: FontWeight.bold,
+                                    )),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _exerciseNames[exercise.exerciseId] ?? exercise.exerciseId,
+                              style: Theme.of(context).textTheme.titleMedium,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_exerciseDescriptions[exercise.exerciseId] != null)
+                        Text(
+                          _exerciseDescriptions[exercise.exerciseId]!,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Stats row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildCompactStat('${exercise.sets}', 'sets'),
+                _buildCompactStat('${exercise.repsPerSet}', 'reps'),
+                if (exercise.weightKg != null)
+                  _buildCompactStat('${exercise.weightKg}', 'kg'),
+                _buildCompactStat('${exercise.restSeconds}s', 'rest'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactStat(String value, String label) {
+    return Column(
+      children: [
+        Text(value,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                )),
+        Text(label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                )),
+      ],
+    );
+  }
+
+  // ── Shared helpers ──
 
   Widget _buildPlaceholderIcon(double size) {
     return Icon(
@@ -344,17 +551,17 @@ class _ActiveWorkoutPageState extends State<ActiveWorkoutPage> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _currentExerciseIndex > 0 ? _previousExercise : null,
+                    onPressed: _currentGroupIndex > 0 ? _previousGroup : null,
                     child: const Text('Previous'),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: FilledButton(
-                    onPressed: _currentExerciseIndex < _exercises.length - 1
-                        ? _nextExercise
+                    onPressed: _currentGroupIndex < _groups.length - 1
+                        ? _nextGroup
                         : _completeWorkout,
-                    child: Text(_currentExerciseIndex < _exercises.length - 1
+                    child: Text(_currentGroupIndex < _groups.length - 1
                         ? 'Next'
                         : 'Complete'),
                   ),
