@@ -56,6 +56,8 @@ class _ExerciseTypesPageState extends State<ExerciseTypesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final userId = _auth.currentUser?.uid;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Exercise Types'),
@@ -66,15 +68,20 @@ class _ExerciseTypesPageState extends State<ExerciseTypesPage> {
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
+      body: userId == null
+          ? const Center(child: Text('Please sign in to manage exercises'))
+          : StreamBuilder<QuerySnapshot>(
         stream: _firestore
             .collection('users')
-            .doc(_auth.currentUser?.uid)
+            .doc(userId)
             .collection('exercises')
             .orderBy('name')
-            .snapshots(),
+            .snapshots()
+            .handleError((_) => <QuerySnapshot>[]),
         builder: (context, snapshot) {
-          if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
+          if (snapshot.hasError) {
+            return _buildCategoriesOnly();
+          }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -122,6 +129,28 @@ class _ExerciseTypesPageState extends State<ExerciseTypesPage> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildCategoriesOnly() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text(
+          'Categories',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 1.2,
+          children: _defaultCategories.map((cat) => _buildCategoryCard(cat)).toList(),
+        ),
+      ],
     );
   }
 
