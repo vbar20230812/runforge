@@ -1,5 +1,4 @@
-import 'dart:async';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,21 +7,18 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Suppress Firestore web SDK RethrownDartError that bypasses all zones
+  PlatformDispatcher.instance.onError = (error, stack) {
+    final msg = error.toString();
+    if (msg.contains('permission-denied')) return true;
+    return false; // let other errors through to default handler
+  };
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
-  // Suppress Firestore permission errors on web that get rethrown at zone level
-  runZonedGuarded(() {
-    runApp(const ProviderScope(child: RunForgeApp()));
-  }, (error, stackTrace) {
-    // Silently ignore Firestore permission-denied errors on web
-    final msg = error.toString();
-    if (msg.contains('permission-denied') || msg.contains('PERMISSION_DENIED')) {
-      return;
-    }
-    debugPrint('Unhandled error: $error');
-  });
+  runApp(const ProviderScope(child: RunForgeApp()));
 }
 
 class RunForgeApp extends StatelessWidget {

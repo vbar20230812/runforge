@@ -83,6 +83,9 @@ class _CalendarPageState extends State<CalendarPage> {
             onFormatChanged: (format) {
               setState(() {});
             },
+            availableCalendarFormats: const {
+              CalendarFormat.month: 'Month',
+            },
             eventLoader: (day) {
               final date = DateTime.utc(day.year, day.month, day.day);
               return _workoutEvents[date] ?? [];
