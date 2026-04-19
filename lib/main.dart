@@ -3,12 +3,18 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+import 'core/theme/app_theme.dart';
 import 'data/services/exercise_service.dart';
 import 'router/app_router.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await dotenv.load(fileName: '.env');
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -17,12 +23,16 @@ void main() async {
     persistenceEnabled: false,
   );
 
-  // Auto-login
+  // Auto-login with credentials from .env
   if (FirebaseAuth.instance.currentUser == null) {
-    await FirebaseAuth.instance.signInWithEmailAndPassword(
-      email: 'victor.z25@gmail.com',
-      password: 'j8swxp44',
-    );
+    final email = dotenv.env['FIREBASE_EMAIL'];
+    final password = dotenv.env['FIREBASE_PASSWORD'];
+    if (email != null && password != null) {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+    }
   }
 
   // Seed exercises if collection is empty
@@ -34,7 +44,9 @@ void main() async {
     if (exerciseSnapshot.docs.isEmpty) {
       await ExerciseService().seedExercises();
     }
-  } catch (_) {}
+  } catch (e) {
+    debugPrint('Exercise seed error: $e');
+  }
 
   runApp(const ProviderScope(child: RunForgeApp()));
 }
@@ -47,24 +59,8 @@ class RunForgeApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'RunForge',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 0,
-        ),
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
       routerConfig: appRouter,
     );

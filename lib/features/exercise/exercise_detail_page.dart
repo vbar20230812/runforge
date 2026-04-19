@@ -1,101 +1,135 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/exercise.dart';
-import '../../data/services/exercise_service.dart';
 import '../../data/services/exercise_image_service.dart';
+import '../../shared/providers/exercise_provider.dart';
 
-class ExerciseDetailPage extends StatefulWidget {
+class ExerciseDetailPage extends ConsumerWidget {
   final String exerciseId;
 
   const ExerciseDetailPage({super.key, required this.exerciseId});
 
   @override
-  State<ExerciseDetailPage> createState() => _ExerciseDetailPageState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final catalogAsync = ref.watch(exerciseCatalogProvider);
+
+    return catalogAsync.when(
+      loading: () => Scaffold(
+        appBar: AppBar(title: const Text('Exercise')),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        appBar: AppBar(title: const Text('Exercise')),
+        body: Center(child: Text('Error: $e')),
+      ),
+      data: (exercises) {
+        final exercise = exercises.where((e) => e.id == exerciseId).firstOrNull;
+
+        if (exercise == null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Exercise')),
+            body: const Center(child: Text('Exercise not found')),
+          );
+        }
+
+        return _ExerciseDetailContent(exercise: exercise);
+      },
+    );
+  }
 }
 
-class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
-  final ExerciseService _exerciseService = ExerciseService();
-  final ExerciseImageService _imageService = ExerciseImageService();
-  Exercise? _exercise;
+class _ExerciseDetailContent extends ConsumerStatefulWidget {
+  final Exercise exercise;
+
+  const _ExerciseDetailContent({required this.exercise});
+
+  @override
+  ConsumerState<_ExerciseDetailContent> createState() =>
+      _ExerciseDetailContentState();
+}
+
+class _ExerciseDetailContentState
+    extends ConsumerState<_ExerciseDetailContent> {
   String? _imageUrl;
   String? _shortDescription;
-  bool _isLoading = true;
+  bool _isLoadingImage = true;
 
   @override
   void initState() {
     super.initState();
-    _loadExercise();
+    _loadImage();
   }
 
-  Future<void> _loadExercise() async {
-    try {
-      final exercise = await _exerciseService.getExercise(widget.exerciseId);
-      String? imageUrl = exercise?.imageSource;
-      String? shortDescription = exercise?.shortDescription;
-
-      // If no stored imageSource or description, try fetching from free API
-      if (exercise != null && (imageUrl == null || shortDescription == null)) {
-        final info = await _imageService.getExerciseInfo(exercise.name);
-        imageUrl ??= info.imageUrl;
-        shortDescription ??= info.shortDescription;
-      }
-
+  Future<void> _loadImage() async {
+    // Use stored image source if available
+    if (widget.exercise.imageSource != null) {
       if (mounted) {
         setState(() {
-          _exercise = exercise;
-          _imageUrl = imageUrl;
-          _shortDescription = shortDescription;
-          _isLoading = false;
+          _imageUrl = widget.exercise.imageSource;
+          _shortDescription = widget.exercise.shortDescription;
+          _isLoadingImage = false;
+        });
+      }
+      return;
+    }
+
+    // Otherwise fetch from the API
+    try {
+      final imageService = ExerciseImageService();
+      final info = await imageService.getExerciseInfo(widget.exercise.name);
+      if (mounted) {
+        setState(() {
+          _imageUrl = info.imageUrl;
+          _shortDescription = info.shortDescription ?? widget.exercise.shortDescription;
+          _isLoadingImage = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      debugPrint('Error loading exercise image: $e');
+      if (mounted) {
+        setState(() => _isLoadingImage = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Exercise')),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_exercise == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Exercise')),
-        body: const Center(child: Text('Exercise not found')),
-      );
-    }
+    final exercise = widget.exercise;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_exercise!.name),
+        title: Text(exercise.name),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
+            _buildHeader(context, exercise),
             if (_shortDescription != null) ...[
               const SizedBox(height: 16),
-              _buildShortDescription(),
+              _buildShortDescription(context),
             ],
             const SizedBox(height: 24),
-            _buildMuscleInfo(),
+            _buildMuscleInfo(context, exercise),
             const SizedBox(height: 24),
-            _buildEquipmentInfo(),
+            _buildEquipmentInfo(context, exercise),
             const SizedBox(height: 24),
-            if (_exercise!.instructions != null) _buildInstructions(),
+            if (exercise.instructions != null &&
+                exercise.instructions!.isNotEmpty)
+              _buildInstructions(context, exercise),
+            if (exercise.boneDensityScore > 0) ...[
+              const SizedBox(height: 24),
+              _buildBoneDensityScore(context, exercise),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context, Exercise exercise) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -110,14 +144,23 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: _imageUrl != null
-                    ? CachedNetworkImage(
-                        imageUrl: _imageUrl!,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) => _buildPlaceholderIcon(),
-                        errorWidget: (_, __, ___) => _buildPlaceholderIcon(),
+                child: _isLoadingImage
+                    ? const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
                       )
-                    : _buildPlaceholderIcon(),
+                    : _imageUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: _imageUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => _placeholderIcon(context),
+                            errorWidget: (_, __, ___) =>
+                                _placeholderIcon(context),
+                          )
+                        : _placeholderIcon(context),
               ),
             ),
             const SizedBox(width: 16),
@@ -126,11 +169,11 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _exercise!.name,
+                    exercise.name,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
-                  _buildDifficultyIndicator(),
+                  _buildDifficultyIndicator(context, exercise.difficulty),
                 ],
               ),
             ),
@@ -140,7 +183,7 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
     );
   }
 
-  Widget _buildPlaceholderIcon() {
+  Widget _placeholderIcon(BuildContext context) {
     return Icon(
       Icons.fitness_center,
       size: 40,
@@ -148,7 +191,7 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
     );
   }
 
-  Widget _buildDifficultyIndicator() {
+  Widget _buildDifficultyIndicator(BuildContext context, int difficulty) {
     return Row(
       children: [
         Text(
@@ -157,7 +200,7 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
         ),
         ...List.generate(5, (index) {
           return Icon(
-            index < _exercise!.difficulty ? Icons.star : Icons.star_border,
+            index < difficulty ? Icons.star : Icons.star_border,
             size: 16,
             color: Colors.amber,
           );
@@ -166,7 +209,7 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
     );
   }
 
-  Widget _buildShortDescription() {
+  Widget _buildShortDescription(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -180,7 +223,7 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
     );
   }
 
-  Widget _buildMuscleInfo() {
+  Widget _buildMuscleInfo(BuildContext context, Exercise exercise) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -192,7 +235,7 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
-            if (_exercise!.primaryMuscles.isNotEmpty) ...[
+            if (exercise.primaryMuscles.isNotEmpty) ...[
               Text(
                 'Primary',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -203,16 +246,17 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _exercise!.primaryMuscles.map((muscle) {
+                children: exercise.primaryMuscles.map((muscle) {
                   return Chip(
-                    label: Text(_formatMuscleName(muscle)),
-                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                    label: Text(_formatName(muscle)),
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
                   );
                 }).toList(),
               ),
               const SizedBox(height: 16),
             ],
-            if (_exercise!.secondaryMuscles.isNotEmpty) ...[
+            if (exercise.secondaryMuscles.isNotEmpty) ...[
               Text(
                 'Secondary',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -223,10 +267,12 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _exercise!.secondaryMuscles.map((muscle) {
+                children: exercise.secondaryMuscles.map((muscle) {
                   return Chip(
-                    label: Text(_formatMuscleName(muscle)),
-                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    label: Text(_formatName(muscle)),
+                    backgroundColor: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest,
                   );
                 }).toList(),
               ),
@@ -237,7 +283,7 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
     );
   }
 
-  Widget _buildEquipmentInfo() {
+  Widget _buildEquipmentInfo(BuildContext context, Exercise exercise) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -252,16 +298,16 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
             ListTile(
               leading: const Icon(Icons.sports),
               title: const Text('Equipment'),
-              subtitle: Text(_formatEquipment(_exercise!.equipment)),
+              subtitle: Text(_formatName(exercise.equipment)),
               contentPadding: EdgeInsets.zero,
             ),
             ListTile(
               leading: const Icon(Icons.move_down),
               title: const Text('Movement Type'),
-              subtitle: Text(_exercise!.movementType),
+              subtitle: Text(_formatName(exercise.movementType)),
               contentPadding: EdgeInsets.zero,
             ),
-            if (_exercise!.isUnilateral)
+            if (exercise.isUnilateral)
               const ListTile(
                 leading: Icon(Icons.swap_horiz),
                 title: Text('Unilateral'),
@@ -274,7 +320,7 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
     );
   }
 
-  Widget _buildInstructions() {
+  Widget _buildInstructions(BuildContext context, Exercise exercise) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -287,7 +333,7 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              _exercise!.instructions!,
+              exercise.instructions!,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
@@ -296,15 +342,30 @@ class _ExerciseDetailPageState extends State<ExerciseDetailPage> {
     );
   }
 
-  String _formatMuscleName(String muscle) {
-    return muscle.split('-').map((word) {
-      return word[0].toUpperCase() + word.substring(1);
-    }).join(' ');
+  Widget _buildBoneDensityScore(BuildContext context, Exercise exercise) {
+    return Card(
+      child: ListTile(
+        leading: Icon(Icons.health_and_safety,
+            color: Theme.of(context).colorScheme.primary),
+        title: const Text('Bone Density Score'),
+        subtitle: Text(
+          'This exercise has a bone density contribution of ${exercise.boneDensityScore}.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        trailing: Text(
+          '${exercise.boneDensityScore}',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+        ),
+      ),
+    );
   }
 
-  String _formatEquipment(String equipment) {
-    if (equipment.isEmpty) return 'Bodyweight';
-    return equipment.split('-').map((word) {
+  String _formatName(String text) {
+    if (text.isEmpty) return 'Bodyweight';
+    return text.split('-').map((word) {
       return word[0].toUpperCase() + word.substring(1);
     }).join(' ');
   }

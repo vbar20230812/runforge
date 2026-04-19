@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user_profile.dart';
 
 class AuthService {
@@ -10,6 +11,24 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
   String? get userId => currentUser?.uid;
 
+  /// Auto-login with credentials. Skips if already logged in.
+  Future<void> autoLogin({
+    required String email,
+    required String password,
+  }) async {
+    if (_auth.currentUser != null) return;
+    await _auth.signInWithEmailAndPassword(email: email, password: password);
+  }
+
+  /// Sign in with email and password (used by auth page fallback).
+  Future<UserCredential> signIn({
+    required String email,
+    required String password,
+  }) async {
+    return await _auth.signInWithEmailAndPassword(email: email, password: password);
+  }
+
+  /// One-time account creation (not used in normal app flow).
   Future<UserCredential> signUp({
     required String email,
     required String password,
@@ -21,7 +40,6 @@ class AuthService {
     );
 
     await _firestore.collection('users').doc(credential.user!.uid).set({
-      'id': credential.user!.uid,
       'email': email,
       'name': name,
       'createdAt': FieldValue.serverTimestamp(),
@@ -35,16 +53,6 @@ class AuthService {
     return credential;
   }
 
-  Future<UserCredential> signIn({
-    required String email,
-    required String password,
-  }) async {
-    return await _auth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-  }
-
   Future<void> signOut() async {
     await _auth.signOut();
   }
@@ -56,6 +64,7 @@ class AuthService {
       if (!doc.exists) return null;
       return UserProfile.fromFirestore(doc);
     } catch (e) {
+      debugPrint('getUserProfile error: $e');
       return null;
     }
   }
