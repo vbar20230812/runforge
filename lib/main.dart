@@ -7,6 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/theme/app_theme.dart';
 import 'data/services/exercise_service.dart';
+import 'data/services/exercise_image_service.dart';
 import 'router/app_router.dart';
 import 'firebase_options.dart';
 
@@ -58,9 +59,48 @@ void main() async {
     } catch (e) {
       debugPrint('Exercise seed error: $e');
     }
+
+    // Backfill exercise images in background (non-blocking)
+    _backfillExerciseImages();
   }
 
   runApp(const ProviderScope(child: RunForgeApp()));
+}
+
+/// Fetch images from wger.de for exercises that don't have one yet.
+/// Runs in the background — does not block app startup.
+Future<void> _backfillExerciseImages() async {
+  try {
+    final firestore = FirebaseFirestore.instance;
+    final snapshot = await firestore.collection('exercises').get();
+    final imageService = ExerciseImageService();
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      if (data['imageSource'] != null && (data['imageSource'] as String).isNotEmpty) {
+        continue; // Already has an image
+      }
+
+      final name = data['name'] as String? ?? '';
+      if (name.isEmpty) continue;
+
+      final info = await imageService.getExerciseInfo(name);
+      if (info.imageUrl != null) {
+        await doc.reference.update({
+          'imageSource': info.imageUrl,
+          if (info.shortDescription != null)
+            'shortDescription': info.shortDescription,
+        });
+        debugPrint('Updated image for: $name');
+      }
+
+      // Small delay to avoid hitting API rate limits
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+    debugPrint('Exercise image backfill complete');
+  } catch (e) {
+    debugPrint('Image backfill error: $e');
+  }
 }
 
 class RunForgeApp extends StatelessWidget {

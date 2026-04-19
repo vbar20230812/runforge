@@ -31,8 +31,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     final userProfile = ref.watch(userProfileProvider);
     final userId = ref.watch(userIdProvider);
     final today = DateTime.now();
-    final weekStart = today.subtract(Duration(days: today.weekday - 1));
-    final weekEnd = weekStart.add(const Duration(days: 6));
+    final weekStart = _dateOnly(today.subtract(Duration(days: today.weekday - 1)));
+    final weekEnd = _dateOnly(weekStart.add(const Duration(days: 6)));
 
     final weekWorkouts = userId != null
         ? ref.watch(workoutListProvider(DateRange(start: weekStart, end: weekEnd)))
@@ -262,6 +262,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       ),
     );
   }
+
+  DateTime _dateOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 
   String _formatTime(int seconds) => '${seconds ~/ 60} min';
 

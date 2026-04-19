@@ -9,6 +9,14 @@
       ]
     },
     {
+      "collectionGroup": "workouts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "scheduledDate", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "weekly_plans",
       "queryScope": "COLLECTION",
       "fields": [
@@ -23,6 +31,22 @@
       "fields": [
         { "fieldPath": "userId", "order": "ASCENDING" },
         { "fieldPath": "exerciseId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "progress_snapshots",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "snapshotDate", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "personal_records",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "achievedAt", "order": "DESCENDING" }
       ]
     }
   ],
