@@ -5,6 +5,7 @@ import '../../shared/widgets/loading_spinner.dart';
 import '../../shared/widgets/error_message.dart';
 import '../../data/models/progress_snapshot.dart';
 import '../../data/models/personal_record.dart';
+import 'volume_chart.dart';
 
 class ProgressPage extends ConsumerWidget {
   const ProgressPage({super.key});
@@ -218,28 +219,7 @@ class _StrengthTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.bar_chart, size: 64, color: Theme.of(context).disabledColor),
-            const SizedBox(height: 16),
-            Text(
-              'Coming soon',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Strength volume charts will appear here.',
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
+    return const VolumeChart();
   }
 }
 
