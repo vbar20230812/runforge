@@ -11,6 +11,7 @@ import '../../data/models/workout.dart';
 import '../../data/models/user_profile.dart';
 import '../../data/services/workout_service.dart';
 import '../../data/services/plan_service.dart';
+import '../../data/services/baseline_service.dart';
 import '../../logic/workout_generator.dart';
 import '../../logic/plan_generator.dart';
 import '../../core/utils/date_helpers.dart';
@@ -204,6 +205,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         ),
         workoutService: WorkoutService(),
         planService: PlanService(),
+        baselineService: BaselineService(),
         user: profile,
       );
 

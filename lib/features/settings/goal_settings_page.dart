@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../shared/providers/user_provider.dart';
 import '../../shared/providers/auth_provider.dart';
@@ -125,20 +124,24 @@ class _GoalSettingsPageState extends ConsumerState<GoalSettingsPage> {
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 8),
-                        ..._goalTypeLabels.entries.map((entry) {
-                          return RadioListTile<String>(
-                            title: Text(entry.value),
-                            value: entry.key,
-                            groupValue: _goalType,
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _goalType = value;
-                                });
-                              }
-                            },
-                          );
-                        }),
+                        RadioGroup<String>(
+                          groupValue: _goalType,
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                _goalType = value;
+                              });
+                            }
+                          },
+                          child: Column(
+                            children: _goalTypeLabels.entries.map((entry) {
+                              return RadioListTile<String>(
+                                title: Text(entry.value),
+                                value: entry.key,
+                              );
+                            }).toList(),
+                          ),
+                        ),
                       ],
                     ),
                   ),

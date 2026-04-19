@@ -14,6 +14,8 @@ class WorkoutExercise {
   final int restSeconds;
   final List<String> primaryMusclesTargeted;
   final int estimatedLoadScore;
+  final String exerciseType; // 'strength' or 'cardio_burst'
+  final int? durationSeconds; // for cardio bursts
 
   WorkoutExercise({
     required this.id,
@@ -29,6 +31,8 @@ class WorkoutExercise {
     required this.restSeconds,
     required this.primaryMusclesTargeted,
     required this.estimatedLoadScore,
+    this.exerciseType = 'strength',
+    this.durationSeconds,
   });
 
   factory WorkoutExercise.fromFirestore(DocumentSnapshot doc) {
@@ -51,6 +55,8 @@ class WorkoutExercise {
       restSeconds: data['restSeconds'] ?? 60,
       primaryMusclesTargeted: List<String>.from(data['primaryMusclesTargeted'] ?? []),
       estimatedLoadScore: data['estimatedLoadScore'] ?? 0,
+      exerciseType: data['exerciseType'] ?? 'strength',
+      durationSeconds: data['durationSeconds'],
     );
   }
 
@@ -68,6 +74,8 @@ class WorkoutExercise {
       'restSeconds': restSeconds,
       'primaryMusclesTargeted': primaryMusclesTargeted,
       'estimatedLoadScore': estimatedLoadScore,
+      'exerciseType': exerciseType,
+      'durationSeconds': durationSeconds,
     };
   }
 }

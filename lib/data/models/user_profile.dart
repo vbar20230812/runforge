@@ -31,7 +31,7 @@ class UserProfile {
     this.goal10kTimeSec = 3600,
     this.strengthFrequency = 3,
     this.runFrequency = 2,
-    this.availableEquipment = const ['dumbbells'],
+    this.availableEquipment = const ['dumbbell'],
     this.preferredRunDays = const ['tuesday', 'thursday'],
   });
 

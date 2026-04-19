@@ -99,6 +99,8 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
           setState(() {
             _elapsedSeconds = DateTime.now().difference(_startedAt!).inSeconds;
           });
+          // Tick the workout timer (for rest and cardio bursts)
+          ref.read(activeWorkoutProvider.notifier).tickTimer();
         }
       });
 
@@ -204,6 +206,17 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     final totalGroups = activeState.groups.length;
     final currentIdx = activeState.currentGroupIndex;
 
+    // Auto-advance when cardio burst timer completes
+    if (currentGroup?.isCardioBurst == true &&
+        !activeState.isTimerRunning &&
+        activeState.timerSeconds == 0 &&
+        !activeState.isLastGroup) {
+      // Timer was running and just finished — auto-advance
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _nextGroup();
+      });
+    }
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -241,9 +254,11 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
             // Main content
             Expanded(
               child: currentGroup != null
-                  ? (currentGroup.isSuperset
-                      ? _buildSupersetContent(context, activeState, currentGroup)
-                      : _buildSoloContent(context, activeState, currentGroup.exercises.first))
+                  ? (currentGroup.isCardioBurst
+                      ? _buildCardioBurstContent(context, activeState, currentGroup)
+                      : currentGroup.isSuperset
+                          ? _buildSupersetContent(context, activeState, currentGroup)
+                          : _buildSoloContent(context, activeState, currentGroup.exercises.first))
                   : _buildNoExercisesContent(),
             ),
             // Controls
@@ -578,6 +593,120 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                 )),
       ],
     );
+  }
+
+  // ── Cardio burst ──
+
+  Widget _buildCardioBurstContent(
+    BuildContext context,
+    ActiveWorkoutState activeState,
+    ExerciseGroup group,
+  ) {
+    final exercise = group.exercises.first;
+    final name = _exerciseNames[exercise.exerciseId] ?? _formatCardioName(exercise.exerciseId);
+    final duration = exercise.durationSeconds ?? 30;
+    final remaining = activeState.timerSeconds;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Cardio icon
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.tertiaryContainer,
+                borderRadius: BorderRadius.circular(50),
+              ),
+              child: Icon(
+                Icons.favorite_rounded,
+                size: 48,
+                color: Theme.of(context).colorScheme.onTertiaryContainer,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text('CARDIO BURST',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.tertiary,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    )),
+            const SizedBox(height: 8),
+            Text(name, style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 32),
+
+            // Countdown circle
+            if (activeState.isTimerRunning && remaining > 0) ...[
+              SizedBox(
+                width: 160,
+                height: 160,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CircularProgressIndicator(
+                      value: remaining / duration,
+                      strokeWidth: 8,
+                      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Theme.of(context).colorScheme.tertiary,
+                      ),
+                    ),
+                    Center(
+                      child: Text(
+                        '${remaining}s',
+                        style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontFeatures: [const FontFeature.tabularFigures()],
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              TextButton.icon(
+                onPressed: _nextGroup,
+                icon: const Icon(Icons.skip_next),
+                label: const Text('Skip'),
+              ),
+            ] else ...[
+              // Not started — show start button
+              Text(
+                '${duration}s',
+                style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.tertiary,
+                    ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () {
+                  ref.read(activeWorkoutProvider.notifier).startCardioBurst(duration);
+                },
+                icon: const Icon(Icons.play_arrow),
+                label: const Text('Start'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.tertiary,
+                  foregroundColor: Theme.of(context).colorScheme.onTertiary,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatCardioName(String exerciseId) {
+    // e.g. 'cardio_jump_rope' -> 'Jump Rope'
+    return exerciseId
+        .replaceFirst('cardio_', '')
+        .split('_')
+        .map((w) => w[0].toUpperCase() + w.substring(1))
+        .join(' ');
   }
 
   // ── No exercises ──

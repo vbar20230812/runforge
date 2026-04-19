@@ -47,20 +47,14 @@ void main() async {
         'goal10kTimeSec': 3600,
         'strengthFrequency': 3,
         'runFrequency': 2,
-        'availableEquipment': ['dumbbells'],
+        'availableEquipment': ['dumbbell'],
         'preferredRunDays': ['tuesday', 'thursday'],
       });
     }
 
-    // Seed exercises if collection is empty
+    // Seed exercises (idempotent — uses set, so existing docs get updated)
     try {
-      final exerciseSnapshot = await FirebaseFirestore.instance
-          .collection('exercises')
-          .limit(1)
-          .get();
-      if (exerciseSnapshot.docs.isEmpty) {
-        await ExerciseService().seedExercises();
-      }
+      await ExerciseService().seedExercises();
     } catch (e) {
       debugPrint('Exercise seed error: $e');
     }

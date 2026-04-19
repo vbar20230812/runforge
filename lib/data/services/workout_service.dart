@@ -108,6 +108,26 @@ class WorkoutService {
         .handleError((_) => null);
   }
 
+  /// Update the actual performance data for a single exercise within a workout.
+  Future<void> updateExerciseActuals(
+    String workoutId,
+    String exerciseDocId, {
+    required int actualSets,
+    required List<int> actualReps,
+    required List<double> actualWeight,
+  }) async {
+    await _firestore
+        .collection('workouts')
+        .doc(workoutId)
+        .collection('exercises')
+        .doc(exerciseDocId)
+        .update({
+      'actualSets': actualSets,
+      'actualReps': actualReps,
+      'actualWeight': actualWeight,
+    });
+  }
+
   /// Creates a workout document and its exercises subcollection in a single
   /// Firestore WriteBatch so everything succeeds or fails atomically.
   Future<String> createWorkoutWithExercises(
@@ -120,8 +140,10 @@ class WorkoutService {
     batch.set(workoutRef, workout.toFirestore());
 
     for (final exercise in exercises) {
-      final exerciseRef =
-          workoutRef.collection('exercises').doc(exercise.id);
+      // Use auto-generated IDs since exercise.id is '' at creation time
+      final exerciseRef = exercise.id.isNotEmpty
+          ? workoutRef.collection('exercises').doc(exercise.id)
+          : workoutRef.collection('exercises').doc();
       batch.set(exerciseRef, exercise.toFirestore());
     }
 
@@ -188,8 +210,9 @@ class WorkoutService {
 
     // Write new exercises.
     for (final exercise in exercises) {
-      final exerciseRef =
-          workoutRef.collection('exercises').doc(exercise.id);
+      final exerciseRef = exercise.id.isNotEmpty
+          ? workoutRef.collection('exercises').doc(exercise.id)
+          : workoutRef.collection('exercises').doc();
       batch.set(exerciseRef, exercise.toFirestore());
     }
 

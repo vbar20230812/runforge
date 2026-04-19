@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/foundation.dart';
 import '../../shared/providers/injury_provider.dart';
 import '../../shared/widgets/loading_spinner.dart';
 import '../../shared/widgets/error_message.dart';

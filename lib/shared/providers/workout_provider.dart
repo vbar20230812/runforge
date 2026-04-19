@@ -11,6 +11,20 @@ class DateRange {
   final DateTime start;
   final DateTime end;
   const DateRange({required this.start, required this.end});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DateRange &&
+          start.year == other.start.year &&
+          start.month == other.start.month &&
+          start.day == other.start.day &&
+          end.year == other.end.year &&
+          end.month == other.end.month &&
+          end.day == other.end.day;
+
+  @override
+  int get hashCode => Object.hash(start.year, start.month, start.day, end.year, end.month, end.day);
 }
 
 final workoutListProvider = StreamProvider.family<List<Workout>, DateRange>((ref, range) {

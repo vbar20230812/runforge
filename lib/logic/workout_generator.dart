@@ -1,7 +1,9 @@
+import 'dart:math';
 import '../data/models/exercise.dart';
 import '../data/models/workout.dart';
 import '../data/models/workout_exercise.dart';
 import '../data/models/user_profile.dart';
+import '../data/models/exercise_baseline.dart';
 import '../data/models/training_goal.dart';
 import '../core/constants/app_constants.dart';
 
@@ -9,15 +11,16 @@ class WorkoutGenerator {
   final List<Exercise> exerciseCatalog;
   final UserProfile user;
   final TrainingGoal? goal;
+  Map<String, ExerciseBaseline> baselines;
 
   WorkoutGenerator({
     required this.exerciseCatalog,
     required this.user,
     this.goal,
+    this.baselines = const {},
   });
 
-  /// Generate a strength workout with superset pairing.
-  /// Returns a tuple of (Workout, List<WorkoutExercise>).
+  /// Generate a strength workout with 4-8 supersets and cardio bursts.
   ({Workout workout, List<WorkoutExercise> exercises}) generateStrengthWorkout({
     required String type, // 'upper', 'lower', 'full'
     required DateTime scheduledDate,
@@ -25,16 +28,17 @@ class WorkoutGenerator {
     required int sessionIndex,
     List<String>? previouslyUsedIds,
   }) {
-    final usedIds = previouslyUsedIds ?? <String>[];
+    final usedIds = <String>{...?previouslyUsedIds};
+    final random = Random(weekNumber * 31 + sessionIndex * 17);
 
-    // Filter exercises by user's available equipment
+    // Filter by user equipment + workout type
     final available = exerciseCatalog
         .where((e) =>
             user.availableEquipment.contains(e.equipment) ||
             e.equipment == 'bodyweight')
+        .where((e) => e.movementType != 'cardio')
         .toList();
 
-    // Filter by workout type (upper/lower/full)
     final targetMuscles = type == 'upper'
         ? AppConstants.upperBodyMuscles
         : type == 'lower'
@@ -45,195 +49,201 @@ class WorkoutGenerator {
         .where((e) => e.primaryMuscles.any((m) => targetMuscles.contains(m)))
         .toList();
 
-    // Select exercises using week-based rotation to avoid repeats
-    final rotationOffset = (weekNumber * 7 + sessionIndex * 13) % 20;
-    final selected = _selectExercises(filtered, usedIds, rotationOffset, type);
+    // Split into easy and hard pools
+    final easyPool = filtered
+        .where((e) =>
+            e.movementType == 'isolation' && e.difficulty <= AppConstants.easyDifficultyMax)
+        .toList();
+    final hardPool = filtered
+        .where((e) =>
+            e.movementType == 'compound' && e.difficulty >= AppConstants.hardDifficultyMin)
+        .toList();
 
-    // Create superset pairs
-    final workoutExercises = _createSupersets(selected, weekNumber);
+    // Determine superset count
+    final totalSupersets = AppConstants.minSupersetsPerWorkout +
+        random.nextInt(AppConstants.maxSupersetsPerWorkout -
+            AppConstants.minSupersetsPerWorkout +
+            1);
 
-    // Calculate estimated duration
-    final duration = _estimateDuration(workoutExercises);
+    // Get antagonist pair rotations for this workout type
+    final pairs = _getAntagonistPairsForType(type);
+    final shuffledPairs = List<List<String>>.from(pairs)..shuffle(random);
 
-    // If duration exceeds max, trim exercises
-    var finalExercises = workoutExercises;
-    if (duration > AppConstants.maxWorkoutDurationMinutes) {
-      finalExercises =
-          _trimToTime(workoutExercises, AppConstants.maxWorkoutDurationMinutes);
+    final allExercises = <WorkoutExercise>[];
+    var order = 0;
+
+    for (var i = 0; i < totalSupersets; i++) {
+      final isEasy = i < AppConstants.easySupersetCount;
+      final pool = isEasy ? easyPool : hardPool;
+      final sets = isEasy ? AppConstants.easySets : AppConstants.hardSets;
+      final reps = isEasy
+          ? AppConstants.easyMinReps +
+              random.nextInt(AppConstants.easyMaxReps - AppConstants.easyMinReps + 1)
+          : AppConstants.hardMinReps +
+              random.nextInt(AppConstants.hardMaxReps - AppConstants.hardMinReps + 1);
+      final restSeconds =
+          isEasy ? AppConstants.defaultSupersetRestSeconds : AppConstants.defaultSetRestSeconds;
+
+      // Pick antagonist muscle pair (rotating)
+      final musclePair = shuffledPairs[i % shuffledPairs.length];
+
+      // Pick one exercise for each muscle in the pair
+      final exerciseA = _pickExerciseForMuscle(
+        pool, musclePair[0], usedIds, random, weekNumber + i * 7);
+      final exerciseB = _pickExerciseForMuscle(
+        pool, musclePair[1], usedIds, random, weekNumber + i * 13);
+
+      if (exerciseA != null && exerciseB != null) {
+        final pairId = 'superset_$i';
+        final weightA = _getSuggestedWeight(exerciseA.id, reps);
+        final weightB = _getSuggestedWeight(exerciseB.id, reps);
+
+        allExercises.add(WorkoutExercise(
+          id: '',
+          exerciseId: exerciseA.id,
+          order: order++,
+          supersetPairId: pairId,
+          sets: sets,
+          repsPerSet: reps,
+          weightKg: weightA,
+          restSeconds: restSeconds,
+          primaryMusclesTargeted: exerciseA.primaryMuscles,
+          estimatedLoadScore: _calculateLoadScore(exerciseA, sets, reps),
+        ));
+        allExercises.add(WorkoutExercise(
+          id: '',
+          exerciseId: exerciseB.id,
+          order: order++,
+          supersetPairId: pairId,
+          sets: sets,
+          repsPerSet: reps,
+          weightKg: weightB,
+          restSeconds: restSeconds,
+          primaryMusclesTargeted: exerciseB.primaryMuscles,
+          estimatedLoadScore: _calculateLoadScore(exerciseB, sets, reps),
+        ));
+
+        usedIds.add(exerciseA.id);
+        usedIds.add(exerciseB.id);
+      } else if (exerciseA != null) {
+        // Couldn't find a pair partner, add as solo
+        allExercises.add(WorkoutExercise(
+          id: '',
+          exerciseId: exerciseA.id,
+          order: order++,
+          sets: sets,
+          repsPerSet: reps,
+          weightKg: _getSuggestedWeight(exerciseA.id, reps),
+          restSeconds: restSeconds,
+          primaryMusclesTargeted: exerciseA.primaryMuscles,
+          estimatedLoadScore: _calculateLoadScore(exerciseA, sets, reps),
+        ));
+        usedIds.add(exerciseA.id);
+      }
+
+      // Insert cardio burst between supersets (not after the last one)
+      if (i < totalSupersets - 1) {
+        final cardioId = AppConstants.cardioBurstExercises[
+            random.nextInt(AppConstants.cardioBurstExercises.length)];
+        final duration = AppConstants.cardioBurstMinSeconds +
+            random.nextInt(
+                AppConstants.cardioBurstMaxSeconds - AppConstants.cardioBurstMinSeconds + 1);
+
+        allExercises.add(WorkoutExercise(
+          id: '',
+          exerciseId: cardioId,
+          order: order++,
+          sets: 1,
+          repsPerSet: 0,
+          restSeconds: 0,
+          primaryMusclesTargeted: ['cardiovascular'],
+          estimatedLoadScore: 20,
+          exerciseType: 'cardio_burst',
+          durationSeconds: duration,
+        ));
+      }
     }
+
+    final duration = _estimateDuration(allExercises);
 
     final workout = Workout(
       id: '',
       userId: user.id,
       scheduledDate: scheduledDate,
       workoutType: 'strength_$type',
-      estimatedDurationMin: _estimateDuration(finalExercises),
+      estimatedDurationMin: duration,
       createdAt: DateTime.now(),
     );
 
-    return (workout: workout, exercises: finalExercises);
+    return (workout: workout, exercises: allExercises);
   }
 
-  /// Select exercises avoiding previously used IDs, with rotation.
-  List<Exercise> _selectExercises(
-    List<Exercise> available,
-    List<String> usedIds,
-    int rotationOffset,
-    String type,
+  /// Pick an exercise for a target muscle, preferring unused ones, with randomization.
+  Exercise? _pickExerciseForMuscle(
+    List<Exercise> pool,
+    String targetMuscle,
+    Set<String> usedIds,
+    Random random,
+    int seed,
   ) {
-    // Group available exercises by primary muscle
-    final byMuscle = <String, List<Exercise>>{};
-    for (final e in available) {
-      for (final m in e.primaryMuscles) {
-        if (targetMusclesForType(type).contains(m)) {
-          byMuscle.putIfAbsent(m, () => []).add(e);
-        }
-      }
-    }
+    // Prefer unused exercises
+    var candidates = pool
+        .where((e) => e.primaryMuscles.contains(targetMuscle) && !usedIds.contains(e.id))
+        .toList();
 
-    // For each muscle group, pick one exercise (rotating by offset)
-    final selected = <Exercise>[];
-    final selectedIds = <String>{};
-
-    // Priority muscles: pick at least one compound for each major group
-    final priorityMuscles = type == 'upper'
-        ? ['chest', 'back', 'shoulders']
-        : type == 'lower'
-            ? ['quadriceps', 'hamstrings', 'glutes']
-            : ['chest', 'back', 'quadriceps', 'hamstrings'];
-
-    for (final muscle in priorityMuscles) {
-      final candidates = (byMuscle[muscle] ?? [])
-          .where(
-              (e) => !usedIds.contains(e.id) && !selectedIds.contains(e.id))
+    // Fallback: allow repeats if pool exhausted
+    if (candidates.isEmpty) {
+      candidates = pool
+          .where((e) => e.primaryMuscles.contains(targetMuscle))
           .toList();
-      if (candidates.isEmpty) continue;
-
-      final index = rotationOffset % candidates.length;
-      final chosen = candidates[index];
-      selected.add(chosen);
-      selectedIds.add(chosen.id);
     }
 
-    // Fill remaining slots with antagonist pairs
-    final pairMuscles = type == 'upper'
-        ? ['biceps', 'triceps']
-        : type == 'lower'
-            ? ['calves']
-            : ['biceps', 'triceps', 'calves', 'core'];
+    if (candidates.isEmpty) return null;
 
-    for (final muscle in pairMuscles) {
-      if (selected.length >= 7) break;
-      final candidates = (byMuscle[muscle] ?? [])
-          .where(
-              (e) => !usedIds.contains(e.id) && !selectedIds.contains(e.id))
-          .toList();
-      if (candidates.isEmpty) continue;
-
-      final index = (rotationOffset + selected.length) % candidates.length;
-      final chosen = candidates[index];
-      selected.add(chosen);
-      selectedIds.add(chosen.id);
-    }
-
-    return selected;
+    // Shuffle deterministically and pick first
+    final shuffled = List<Exercise>.from(candidates)
+      ..shuffle(Random(seed + targetMuscle.hashCode));
+    return shuffled.first;
   }
 
-  List<String> targetMusclesForType(String type) {
-    return type == 'upper'
-        ? AppConstants.upperBodyMuscles
-        : type == 'lower'
-            ? AppConstants.lowerBodyMuscles
-            : AppConstants.muscleGroups;
+  /// Get antagonist muscle pairs appropriate for the workout type.
+  List<List<String>> _getAntagonistPairsForType(String type) {
+    if (type == 'upper') {
+      return [
+        ['chest', 'back'],
+        ['biceps', 'triceps'],
+        ['shoulders', 'back'],
+        ['chest', 'back'],
+      ];
+    } else if (type == 'lower') {
+      return [
+        ['quadriceps', 'hamstrings'],
+        ['glutes', 'quadriceps'],
+        ['hamstrings', 'calves'],
+        ['quadriceps', 'hamstrings'],
+      ];
+    } else {
+      // Full body — mix upper and lower pairs
+      return [
+        ['chest', 'back'],
+        ['quadriceps', 'hamstrings'],
+        ['biceps', 'triceps'],
+        ['glutes', 'shoulders'],
+        ['chest', 'back'],
+        ['quadriceps', 'hamstrings'],
+      ];
+    }
   }
 
-  /// Create superset pairs from selected exercises.
-  List<WorkoutExercise> _createSupersets(
-      List<Exercise> selected, int weekNumber) {
-    final result = <WorkoutExercise>[];
-    final paired = <String>{};
-
-    // Determine sets/reps from periodization
-    final phase = AppConstants.getPhaseForWeek(weekNumber);
-    final (sets, reps) = _setsRepsForPhase(phase);
-
-    var order = 0;
-    var pairIndex = 0;
-
-    // Try to pair antagonist muscles
-    for (int i = 0; i < selected.length; i++) {
-      if (paired.contains(selected[i].id)) continue;
-
-      final exercise = selected[i];
-      String? pairId;
-
-      // Find an antagonist partner
-      for (final muscle in exercise.primaryMuscles) {
-        final antagonist = AppConstants.antagonistPairs[muscle];
-        if (antagonist == null) continue;
-
-        for (int j = i + 1; j < selected.length; j++) {
-          if (paired.contains(selected[j].id)) continue;
-          if (selected[j].primaryMuscles.contains(antagonist)) {
-            pairId = 'superset_$pairIndex';
-            paired.add(selected[j].id);
-
-            // Add partner exercise
-            result.add(WorkoutExercise(
-              id: '',
-              exerciseId: selected[j].id,
-              order: order++,
-              supersetPairId: pairId,
-              sets: sets,
-              repsPerSet: reps,
-              restSeconds: AppConstants.defaultSupersetRestSeconds,
-              primaryMusclesTargeted: selected[j].primaryMuscles,
-              estimatedLoadScore:
-                  _calculateLoadScore(selected[j], sets, reps),
-            ));
-            pairIndex++;
-            break;
-          }
-        }
-        if (pairId != null) break;
-      }
-
-      // Add the exercise itself
-      result.add(WorkoutExercise(
-        id: '',
-        exerciseId: exercise.id,
-        order: order++,
-        supersetPairId: pairId,
-        sets: sets,
-        repsPerSet: reps,
-        restSeconds: pairId != null
-            ? AppConstants.defaultSupersetRestSeconds
-            : AppConstants.defaultSetRestSeconds,
-        primaryMusclesTargeted: exercise.primaryMuscles,
-        estimatedLoadScore: _calculateLoadScore(exercise, sets, reps),
-      ));
-
-      paired.add(exercise.id);
-    }
-
-    return result;
-  }
-
-  (int sets, int reps) _setsRepsForPhase(String phase) {
-    switch (phase) {
-      case 'base':
-        return (3, 12);
-      case 'build':
-        return (4, 10);
-      case 'peak':
-        return (4, 8);
-      default:
-        return (3, 12);
-    }
+  /// Get suggested weight from baseline if available.
+  double? _getSuggestedWeight(String exerciseId, int targetReps) {
+    final baseline = baselines[exerciseId];
+    if (baseline == null) return null;
+    // Use last week average if available, otherwise baseline
+    return baseline.lastWeekAvgWeight ?? baseline.baselineWeightKg;
   }
 
   int _calculateLoadScore(Exercise exercise, int sets, int reps) {
-    // Load score: difficulty * sets * reps / 10, scaled by bone density
     return (exercise.difficulty *
             sets *
             reps *
@@ -246,28 +256,16 @@ class WorkoutGenerator {
   int _estimateDuration(List<WorkoutExercise> exercises) {
     int totalSeconds = 0;
     for (final ex in exercises) {
-      final setTime = ex.repsPerSet * AppConstants.avgRepDurationSeconds;
-      totalSeconds += ex.sets * (setTime + ex.restSeconds);
+      if (ex.exerciseType == 'cardio_burst') {
+        totalSeconds += ex.durationSeconds ?? 30;
+      } else {
+        final setTime = ex.repsPerSet * AppConstants.avgRepDurationSeconds;
+        totalSeconds += ex.sets * (setTime + ex.restSeconds);
+      }
     }
-    // Supersets share rest time, so reduce by ~30%
+    // Supersets share rest time, reduce by ~30%
     final hasSupersets = exercises.any((e) => e.supersetPairId != null);
     if (hasSupersets) totalSeconds = (totalSeconds * 0.7).round();
-    return (totalSeconds / 60).round();
-  }
-
-  List<WorkoutExercise> _trimToTime(
-      List<WorkoutExercise> exercises, int maxMinutes) {
-    var totalSeconds = 0;
-    final result = <WorkoutExercise>[];
-    final maxSeconds = maxMinutes * 60;
-
-    for (final ex in exercises) {
-      final setTime = ex.repsPerSet * AppConstants.avgRepDurationSeconds;
-      final exSeconds = ex.sets * (setTime + ex.restSeconds);
-      if (totalSeconds + exSeconds > maxSeconds) break;
-      totalSeconds += exSeconds;
-      result.add(ex);
-    }
-    return result;
+    return (totalSeconds / 60).round().clamp(1, 120);
   }
 }

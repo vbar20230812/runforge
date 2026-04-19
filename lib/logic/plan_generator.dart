@@ -3,8 +3,10 @@ import '../data/models/training_goal.dart';
 import '../data/models/workout.dart';
 import '../data/models/workout_exercise.dart';
 import '../data/models/weekly_plan.dart';
+import '../data/models/exercise_baseline.dart';
 import '../data/services/workout_service.dart';
 import '../data/services/plan_service.dart';
+import '../data/services/baseline_service.dart';
 import '../core/constants/app_constants.dart';
 import 'workout_generator.dart';
 
@@ -12,6 +14,7 @@ class PlanGenerator {
   final WorkoutGenerator workoutGenerator;
   final WorkoutService workoutService;
   final PlanService planService;
+  final BaselineService baselineService;
   final UserProfile user;
   final TrainingGoal? goal;
 
@@ -19,11 +22,13 @@ class PlanGenerator {
     required this.workoutGenerator,
     required this.workoutService,
     required this.planService,
+    required this.baselineService,
     required this.user,
     this.goal,
   });
 
   /// Generate a full weekly plan and save to Firestore.
+  /// Workouts are scheduled from today onward (never in the past).
   Future<WeeklyPlan> generateWeek({
     required int weekNumber,
     required int year,
@@ -35,11 +40,21 @@ class PlanGenerator {
     final allExercises = <List<WorkoutExercise>>[];
     final usedIds = previouslyUsedExerciseIds ?? <String>[];
 
+    // Fetch baselines for weight suggestions
+    final baselineList = await baselineService.getAllBaselines(user.id);
+    final baselineMap = <String, ExerciseBaseline>{};
+    for (final b in baselineList) {
+      baselineMap[b.exerciseId] = b;
+    }
+    workoutGenerator.baselines = Map.unmodifiable(baselineMap);
+
+    // Today — never schedule in the past
+    final today = _dateOnly(DateTime.now());
+
     // Generate strength workouts
     for (var i = 0; i < user.strengthFrequency; i++) {
       final type = _getStrengthType(i, user.strengthFrequency);
-      final date =
-          _getNextDate(weekStart, AppConstants.defaultStrengthDays, i);
+      final date = _getNextDate(today, AppConstants.defaultStrengthDays, i);
 
       final result = workoutGenerator.generateStrengthWorkout(
         type: type,
@@ -51,13 +66,14 @@ class PlanGenerator {
 
       workouts.add(result.workout);
       allExercises.add(result.exercises);
-      usedIds.addAll(result.exercises.map((e) => e.exerciseId));
+      usedIds.addAll(
+          result.exercises.where((e) => e.exerciseType == 'strength').map((e) => e.exerciseId));
     }
 
     // Generate running workouts
     for (var i = 0; i < user.runFrequency; i++) {
       final runType = _getRunType(i, phase);
-      final date = _getNextDate(weekStart, AppConstants.defaultRunDays, i);
+      final date = _getNextDate(today, AppConstants.defaultRunDays, i);
       final workout = Workout(
         id: '',
         userId: user.id,
@@ -82,6 +98,13 @@ class PlanGenerator {
       ]);
     }
 
+    // Sort workouts by scheduled date
+    final indexed = List.generate(workouts.length, (i) => i);
+    indexed.sort((a, b) => workouts[a].scheduledDate.compareTo(workouts[b].scheduledDate));
+
+    final sortedWorkouts = indexed.map((i) => workouts[i]).toList();
+    final sortedExercises = indexed.map((i) => allExercises[i]).toList();
+
     // Save all workouts with exercises
     final planId = await planService.createWeeklyPlan(WeeklyPlan(
       id: '',
@@ -93,24 +116,24 @@ class PlanGenerator {
           ((weekNumber - 1) ~/ AppConstants.mesocycleLength) + 1,
       startDate: weekStart,
       endDate: weekStart.add(const Duration(days: 6)),
-      workoutIds: [], // Will be populated after saving workouts
+      workoutIds: [],
       createdAt: DateTime.now(),
     ));
 
     final workoutIds = <String>[];
-    for (var i = 0; i < workouts.length; i++) {
+    for (var i = 0; i < sortedWorkouts.length; i++) {
       final workoutWithPlan = Workout(
-        id: workouts[i].id,
-        userId: workouts[i].userId,
+        id: sortedWorkouts[i].id,
+        userId: sortedWorkouts[i].userId,
         weeklyPlanId: planId,
-        scheduledDate: workouts[i].scheduledDate,
-        workoutType: workouts[i].workoutType,
-        estimatedDurationMin: workouts[i].estimatedDurationMin,
-        createdAt: workouts[i].createdAt,
+        scheduledDate: sortedWorkouts[i].scheduledDate,
+        workoutType: sortedWorkouts[i].workoutType,
+        estimatedDurationMin: sortedWorkouts[i].estimatedDurationMin,
+        createdAt: sortedWorkouts[i].createdAt,
       );
       final workoutId = await workoutService.createWorkoutWithExercises(
         workoutWithPlan,
-        allExercises[i],
+        sortedExercises[i],
       );
       workoutIds.add(workoutId);
     }
@@ -152,10 +175,18 @@ class PlanGenerator {
     return types[index % types.length];
   }
 
-  DateTime _getNextDate(DateTime weekStart, List<int> days, int index) {
-    final dayOfWeek = days[index % days.length];
-    final monday = weekStart;
-    return monday.add(Duration(days: dayOfWeek - 1));
+  /// Find the next available date starting from [afterDate].
+  /// Iterates through [targetDays] cycling as needed.
+  DateTime _getNextDate(DateTime afterDate, List<int> targetDays, int index) {
+    final targetDay = targetDays[index % targetDays.length];
+    // Find the next occurrence of targetDay on or after afterDate
+    var candidate = afterDate;
+    while (candidate.weekday != targetDay) {
+      candidate = candidate.add(const Duration(days: 1));
+    }
+    // If we need a second/third occurrence of the same day, add weeks
+    final weekOffset = index ~/ targetDays.length;
+    return candidate.add(Duration(days: 7 * weekOffset));
   }
 
   int _estimateRunDuration(String runType) {
@@ -172,4 +203,6 @@ class PlanGenerator {
         return 30;
     }
   }
+
+  DateTime _dateOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 }

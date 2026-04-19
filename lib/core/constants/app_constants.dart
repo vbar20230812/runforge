@@ -19,7 +19,42 @@ class AppConstants {
   // Duration estimates
   static const int avgRepDurationSeconds = 4;
   static const int defaultRestSeconds = 60;
-  static const int maxWorkoutDurationMinutes = 35;
+  static const int maxWorkoutDurationMinutes = 60;
+
+  // Superset configuration
+  static const int minSupersetsPerWorkout = 4;
+  static const int maxSupersetsPerWorkout = 8;
+  static const int easySupersetCount = 3; // first 1-3 are easier
+  static const int hardSupersetCount = 2; // last 1-2 are harder
+
+  // Difficulty tiers
+  static const int easyDifficultyMax = 2; // difficulty <= 2 for easy supersets
+  static const int hardDifficultyMin = 3; // difficulty >= 3 for hard supersets
+
+  // Rep ranges per difficulty tier
+  static const int easyMinReps = 12;
+  static const int easyMaxReps = 15;
+  static const int hardMinReps = 6;
+  static const int hardMaxReps = 8;
+
+  // Sets per difficulty tier
+  static const int easySets = 3;
+  static const int hardSets = 4;
+
+  // Cardio burst between supersets
+  static const int cardioBurstMinSeconds = 30;
+  static const int cardioBurstMaxSeconds = 60;
+  static const List<String> cardioBurstExercises = [
+    'cardio_jump_rope',
+    'cardio_high_knees',
+    'cardio_burpees',
+    'cardio_jumping_jacks',
+    'cardio_mountain_climbers',
+    'cardio_box_step_ups',
+  ];
+
+  // Baseline smoothing factor (EMA: newBaseline = (1-a)*old + a*session)
+  static const double baselineSmoothingFactor = 0.3;
 
   // Muscle groups
   static const List<String> muscleGroups = [
@@ -29,7 +64,7 @@ class AppConstants {
 
   // Equipment types
   static const List<String> equipmentTypes = [
-    'barbell', 'dumbbell', 'cable', 'bodyweight', 'kettlebell', 'machine',
+    'barbell', 'dumbbell', 'cable machine', 'bodyweight', 'kettlebell', 'machine',
   ];
 
   // Antagonist pairs for superset grouping

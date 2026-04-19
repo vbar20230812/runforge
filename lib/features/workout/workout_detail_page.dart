@@ -37,6 +37,10 @@ class WorkoutDetailPage extends ConsumerWidget {
         return Scaffold(
           appBar: AppBar(
             title: Text(_formatWorkoutType(workout.workoutType)),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => context.pop(),
+            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.edit),

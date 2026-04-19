@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/workout.dart';
 import '../../data/models/workout_exercise.dart';
 import '../../data/services/workout_service.dart';
+import '../../data/services/baseline_service.dart';
 
 class SetLog {
   final int reps;
@@ -13,18 +14,19 @@ class SetLog {
       SetLog(reps: reps ?? this.reps, weight: weight ?? this.weight, completed: completed ?? this.completed);
 }
 
-/// Group of exercises (solo or superset pair)
+/// Group of exercises (solo, superset pair, or cardio burst)
 class ExerciseGroup {
   final List<WorkoutExercise> exercises;
-  ExerciseGroup({required this.exercises});
-  bool get isSuperset => exercises.length > 1;
+  final bool isCardioBurst;
+  ExerciseGroup({required this.exercises, this.isCardioBurst = false});
+  bool get isSuperset => !isCardioBurst && exercises.length > 1;
 }
 
 class ActiveWorkoutState {
   final Workout workout;
   final List<ExerciseGroup> groups;
   final int currentGroupIndex;
-  final int currentSet;          // current set within the group
+  final int currentSet;
   final Map<int, List<SetLog>> setLogs; // exercise order -> list of set logs
   final DateTime startedAt;
   final bool isTimerRunning;
@@ -72,38 +74,60 @@ class ActiveWorkoutState {
 
 class ActiveWorkoutNotifier extends StateNotifier<ActiveWorkoutState?> {
   final WorkoutService _workoutService;
+  final BaselineService _baselineService;
 
-  ActiveWorkoutNotifier(this._workoutService) : super(null);
+  ActiveWorkoutNotifier(this._workoutService, this._baselineService) : super(null);
 
   void startWorkout(Workout workout, List<WorkoutExercise> exercises) {
-    // Group exercises by superset pair ID
-    final groups = <ExerciseGroup>[];
-    final soloExercises = <WorkoutExercise>[];
-    final supersetMap = <String, List<WorkoutExercise>>{};
+    // Sort by order and group: preserve interleaved cardio bursts
+    final sorted = List<WorkoutExercise>.from(exercises)
+      ..sort((a, b) => a.order.compareTo(b.order));
 
-    for (final ex in exercises) {
-      if (ex.supersetPairId != null) {
-        supersetMap.putIfAbsent(ex.supersetPairId!, () => []).add(ex);
-      } else {
-        soloExercises.add(ex);
+    final groups = <ExerciseGroup>[];
+    final supersetMap = <String, List<WorkoutExercise>>{};
+    final processed = <String>{};
+
+    // First pass: group superset pairs
+    for (final ex in sorted) {
+      if (ex.supersetPairId != null && !processed.contains(ex.supersetPairId)) {
+        final pair = sorted.where((e) => e.supersetPairId == ex.supersetPairId).toList();
+        if (pair.length >= 2) {
+          supersetMap[ex.supersetPairId!] = pair;
+          processed.add(ex.supersetPairId!);
+        }
       }
     }
 
-    // Add superset groups first, then solo exercises
-    for (final pair in supersetMap.values) {
-      groups.add(ExerciseGroup(exercises: pair));
-    }
-    for (final ex in soloExercises) {
-      groups.add(ExerciseGroup(exercises: [ex]));
+    // Second pass: build groups in order
+    final seen = <String>{};
+    for (final ex in sorted) {
+      if (seen.contains(ex.exerciseId) && ex.supersetPairId == null) continue;
+
+      if (ex.exerciseType == 'cardio_burst') {
+        groups.add(ExerciseGroup(exercises: [ex], isCardioBurst: true));
+        seen.add(ex.exerciseId);
+      } else if (ex.supersetPairId != null && !seen.contains(ex.supersetPairId)) {
+        final pair = supersetMap[ex.supersetPairId] ?? [ex];
+        groups.add(ExerciseGroup(exercises: pair));
+        seen.add(ex.supersetPairId!);
+        for (final p in pair) {
+          seen.add(p.exerciseId);
+        }
+      } else if (ex.supersetPairId == null) {
+        groups.add(ExerciseGroup(exercises: [ex]));
+        seen.add(ex.exerciseId);
+      }
     }
 
-    // Initialize set logs
+    // Initialize set logs (only for strength exercises)
     final setLogs = <int, List<SetLog>>{};
     for (final ex in exercises) {
-      setLogs[ex.order] = List.generate(
-        ex.sets,
-        (_) => SetLog(reps: ex.repsPerSet, weight: ex.weightKg),
-      );
+      if (ex.exerciseType != 'cardio_burst') {
+        setLogs[ex.order] = List.generate(
+          ex.sets,
+          (_) => SetLog(reps: ex.repsPerSet, weight: ex.weightKg),
+        );
+      }
     }
 
     state = ActiveWorkoutState(
@@ -131,7 +155,16 @@ class ActiveWorkoutNotifier extends StateNotifier<ActiveWorkoutState?> {
     state = state!.copyWith(
       setLogs: logs,
       isTimerRunning: true,
-      timerSeconds: 60, // default rest
+      timerSeconds: 60,
+    );
+  }
+
+  /// Start the cardio burst countdown
+  void startCardioBurst(int durationSeconds) {
+    if (state == null) return;
+    state = state!.copyWith(
+      isTimerRunning: true,
+      timerSeconds: durationSeconds,
     );
   }
 
@@ -167,12 +200,56 @@ class ActiveWorkoutNotifier extends StateNotifier<ActiveWorkoutState?> {
     if (state == null) return null;
     try {
       final duration = state!.elapsedSeconds ~/ 60;
+      final workoutId = state!.workout.id;
+      final setLogs = state!.setLogs;
+      final userId = state!.workout.userId;
+
+      // Mark workout complete
       await _workoutService.completeWorkout(
-        state!.workout.id,
+        workoutId,
         actualDurationMin: duration,
         userNotes: notes,
       );
-      final workoutId = state!.workout.id;
+
+      // Persist actual set data and update baselines
+      for (final entry in setLogs.entries) {
+        final order = entry.key;
+        final logs = entry.value;
+        final completedLogs = logs.where((l) => l.completed).toList();
+        if (completedLogs.isEmpty) continue;
+
+        // Find the exercise for this order
+        final exercise = state!.groups
+            .expand((g) => g.exercises)
+            .where((e) => e.order == order)
+            .firstOrNull;
+        if (exercise == null) continue;
+
+        final actualReps = completedLogs.map((l) => l.reps).toList();
+        final actualWeight = completedLogs.map((l) => l.weight ?? 0.0).toList();
+
+        // Write actual data to Firestore
+        await _workoutService.updateExerciseActuals(
+          workoutId,
+          exercise.id,
+          actualSets: completedLogs.length,
+          actualReps: actualReps,
+          actualWeight: actualWeight,
+        );
+
+        // Update baseline
+        final avgWeight = actualWeight.isNotEmpty
+            ? actualWeight.reduce((a, b) => a + b) / actualWeight.length
+            : 0.0;
+        final avgReps = actualReps.isNotEmpty
+            ? (actualReps.reduce((a, b) => a + b) / actualReps.length).round()
+            : 0;
+        if (avgWeight > 0) {
+          await _baselineService.updateBaselineFromSession(
+            userId, exercise.exerciseId, avgWeight, avgReps);
+        }
+      }
+
       state = null;
       return workoutId;
     } catch (e) {
@@ -187,5 +264,5 @@ class ActiveWorkoutNotifier extends StateNotifier<ActiveWorkoutState?> {
 }
 
 final activeWorkoutProvider = StateNotifierProvider<ActiveWorkoutNotifier, ActiveWorkoutState?>((ref) {
-  return ActiveWorkoutNotifier(WorkoutService());
+  return ActiveWorkoutNotifier(WorkoutService(), BaselineService());
 });
