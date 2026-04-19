@@ -5,13 +5,28 @@ import 'package:intl/intl.dart';
 import '../../shared/providers/user_provider.dart';
 import '../../shared/providers/auth_provider.dart';
 import '../../shared/providers/workout_provider.dart';
+import '../../shared/providers/exercise_provider.dart';
+import '../../shared/providers/plan_provider.dart';
 import '../../data/models/workout.dart';
+import '../../data/models/user_profile.dart';
+import '../../data/services/workout_service.dart';
+import '../../data/services/plan_service.dart';
+import '../../logic/workout_generator.dart';
+import '../../logic/plan_generator.dart';
+import '../../core/utils/date_helpers.dart';
 
-class DashboardPage extends ConsumerWidget {
+class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends ConsumerState<DashboardPage> {
+  bool _isGenerating = false;
+
+  @override
+  Widget build(BuildContext context) {
     final userProfile = ref.watch(userProfileProvider);
     final userId = ref.watch(userIdProvider);
     final today = DateTime.now();
@@ -22,12 +37,9 @@ class DashboardPage extends ConsumerWidget {
         ? ref.watch(workoutListProvider(DateRange(start: weekStart, end: weekEnd)))
         : null;
 
-    final todayWorkouts = weekWorkouts?.whenOrNull(
-      data: (workouts) => workouts.where((w) {
-        final d = w.scheduledDate;
-        return d.year == today.year && d.month == today.month && d.day == today.day;
-      }).toList(),
-    );
+    final hasWorkouts = weekWorkouts?.whenOrNull(
+          data: (workouts) => workouts.isNotEmpty,
+        ) ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -39,44 +51,42 @@ class DashboardPage extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(userProfileProvider);
-          if (userId != null) ref.invalidate(workoutListProvider(DateRange(start: weekStart, end: weekEnd)));
+          if (userId != null) {
+            ref.invalidate(workoutListProvider(DateRange(start: weekStart, end: weekEnd)));
+          }
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             // Welcome card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Welcome${userProfile.whenOrNull(data: (p) => p?.name != null ? ', ${p!.name}!' : '!') ?? '!'}',
-                      style: Theme.of(context).textTheme.headlineSmall),
-                    const SizedBox(height: 4),
-                    Text('Goal: 10K under ${_formatTime(userProfile.whenOrNull(data: (p) => p?.goal10kTimeSec ?? 3600) ?? 3600)}',
-                      style: Theme.of(context).textTheme.bodyLarge),
-                  ],
+            _buildWelcomeCard(userProfile),
+            const SizedBox(height: 24),
+
+            // Generate plan button (shown when no workouts exist)
+            if (!hasWorkouts && !_isGenerating)
+              _buildGeneratePlanButton(userProfile, userId),
+
+            if (_isGenerating)
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 12),
+                      Text('Generating your training plan...'),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
 
             // Today section
             Text('Today', style: Theme.of(context).textTheme.titleLarge),
             Text(DateFormat('EEEE, MMMM d').format(today),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 12),
-
-            if (todayWorkouts != null && todayWorkouts.isNotEmpty)
-              ...todayWorkouts.map((w) => _WorkoutListTile(workout: w))
-            else
-              const Card(child: ListTile(
-                leading: Icon(Icons.self_improvement),
-                title: Text('Rest day'),
-                subtitle: Text('No workouts scheduled for today'),
-              )),
-
+            _buildTodayWorkouts(weekWorkouts, today),
             const SizedBox(height: 24),
 
             // Weekly overview
@@ -98,53 +108,176 @@ class DashboardPage extends ConsumerWidget {
             const SizedBox(height: 12),
             weekWorkouts?.when(
               data: (workouts) {
-                final upcoming = workouts.where((w) => w.status == 'planned' && w.scheduledDate.isAfter(today)).take(5).toList();
+                final upcoming = workouts
+                    .where((w) => w.status == 'planned' && w.scheduledDate.isAfter(today))
+                    .take(5)
+                    .toList();
                 if (upcoming.isEmpty) return const Text('No upcoming workouts');
                 return Column(children: upcoming.map((w) => _WorkoutListTile(workout: w)).toList());
               },
-              loading: () => const CircularProgressIndicator(),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (_, __) => const Text('Could not load workouts'),
-            ) ?? const CircularProgressIndicator(),
+            ) ?? const Center(child: CircularProgressIndicator()),
           ],
         ),
       ),
     );
   }
 
-  String _formatTime(int seconds) {
-    final m = seconds ~/ 60;
-    return '$m min';
+  Widget _buildWelcomeCard(AsyncValue<UserProfile?> userProfile) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Welcome${userProfile.whenOrNull(data: (p) => p?.name != null ? ', ${p!.name}!' : '!') ?? '!'}',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Goal: 10K under ${_formatTime(userProfile.whenOrNull(data: (p) => p?.goal10kTimeSec ?? 3600) ?? 3600)}',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  String _countRuns(AsyncValue? workouts) {
-    if (workouts == null) return '0';
-    return workouts.whenOrNull(data: (list) {
-      final w = list as List<Workout>;
-      final completed = w.where((w) => w.isRun && w.isCompleted).length;
-      final total = w.where((w) => w.isRun).length;
-      return '$completed/$total';
-    }) ?? '0/0';
+  Widget _buildGeneratePlanButton(AsyncValue<UserProfile?> userProfile, String? userId) {
+    return Card(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Icon(Icons.auto_awesome, size: 40, color: Theme.of(context).colorScheme.onPrimaryContainer),
+            const SizedBox(height: 12),
+            Text('No training plan yet', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+            )),
+            const SizedBox(height: 4),
+            Text('Generate a personalized weekly plan based on your goals and preferences.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              )),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: userId != null ? () => _generatePlan(userProfile, userId) : null,
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('Generate This Week\'s Plan'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  String _countStrength(AsyncValue? workouts) {
-    if (workouts == null) return '0';
-    return workouts.whenOrNull(data: (list) {
-      final w = list as List<Workout>;
-      final completed = w.where((w) => w.isStrength && w.isCompleted).length;
-      final total = w.where((w) => w.isStrength).length;
-      return '$completed/$total';
-    }) ?? '0/0';
+  Future<void> _generatePlan(AsyncValue<UserProfile?> userProfile, String userId) async {
+    setState(() => _isGenerating = true);
+
+    try {
+      final profile = userProfile.whenOrNull(data: (p) => p);
+      if (profile == null) {
+        _showError('User profile not found');
+        return;
+      }
+
+      // Fetch exercises from Firestore
+      final exercises = await ref.read(exerciseCatalogProvider.future);
+      if (exercises.isEmpty) {
+        _showError('No exercises found. Try restarting the app.');
+        return;
+      }
+
+      final now = DateTime.now();
+      final weekStart = now.subtract(Duration(days: now.weekday - 1));
+      final weekNumber = DateHelpers.weekNumber(now);
+
+      final generator = PlanGenerator(
+        workoutGenerator: WorkoutGenerator(
+          exerciseCatalog: exercises,
+          user: profile,
+        ),
+        workoutService: WorkoutService(),
+        planService: PlanService(),
+        user: profile,
+      );
+
+      await generator.generateWeek(
+        weekNumber: weekNumber,
+        year: now.year,
+        weekStart: weekStart,
+      );
+
+      // Refresh providers to show new data
+      ref.invalidate(workoutListProvider(DateRange(
+        start: weekStart,
+        end: weekStart.add(const Duration(days: 6)),
+      )));
+      ref.invalidate(currentWeekPlanProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Training plan generated!')),
+        );
+      }
+    } catch (e) {
+      _showError('Failed to generate plan: $e');
+    } finally {
+      if (mounted) setState(() => _isGenerating = false);
+    }
   }
 
-  String _completionRate(AsyncValue? workouts) {
-    if (workouts == null) return '0%';
-    return workouts.whenOrNull(data: (list) {
-      final w = list as List<Workout>;
-      if (w.isEmpty) return '0%';
-      final pct = (w.where((w) => w.isCompleted).length / w.length * 100).round();
-      return '$pct%';
-    }) ?? '0%';
+  void _showError(String message) {
+    if (mounted) {
+      setState(() => _isGenerating = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
+    }
   }
+
+  Widget _buildTodayWorkouts(AsyncValue<List<Workout>>? weekWorkouts, DateTime today) {
+    final todayWorkouts = weekWorkouts?.whenOrNull(
+      data: (workouts) => workouts.where((w) {
+        final d = w.scheduledDate;
+        return d.year == today.year && d.month == today.month && d.day == today.day;
+      }).toList(),
+    );
+
+    if (todayWorkouts != null && todayWorkouts.isNotEmpty) {
+      return Column(children: todayWorkouts.map((w) => _WorkoutListTile(workout: w)).toList());
+    }
+    return const Card(
+      child: ListTile(
+        leading: Icon(Icons.self_improvement),
+        title: Text('Rest day'),
+        subtitle: Text('No workouts scheduled for today'),
+      ),
+    );
+  }
+
+  String _formatTime(int seconds) => '${seconds ~/ 60} min';
+
+  String _countRuns(AsyncValue? w) => w?.whenOrNull(data: (list) {
+    final workouts = list as List<Workout>;
+    return '${workouts.where((w) => w.isRun && w.isCompleted).length}/${workouts.where((w) => w.isRun).length}';
+  }) ?? '0/0';
+
+  String _countStrength(AsyncValue? w) => w?.whenOrNull(data: (list) {
+    final workouts = list as List<Workout>;
+    return '${workouts.where((w) => w.isStrength && w.isCompleted).length}/${workouts.where((w) => w.isStrength).length}';
+  }) ?? '0/0';
+
+  String _completionRate(AsyncValue? w) => w?.whenOrNull(data: (list) {
+    final workouts = list as List<Workout>;
+    if (workouts.isEmpty) return '0%';
+    return '${(workouts.where((w) => w.isCompleted).length / workouts.length * 100).round()}%';
+  }) ?? '0%';
 }
 
 class _WorkoutListTile extends StatelessWidget {
@@ -153,10 +286,17 @@ class _WorkoutListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = workout.isCompleted ? Colors.green : workout.isSkipped ? Colors.grey : Theme.of(context).colorScheme.primary;
+    final color = workout.isCompleted
+        ? Colors.green
+        : workout.isSkipped
+            ? Colors.grey
+            : Theme.of(context).colorScheme.primary;
     return Card(
       child: ListTile(
-        leading: Icon(workout.isStrength ? Icons.fitness_center : Icons.directions_run, color: color),
+        leading: Icon(
+          workout.isStrength ? Icons.fitness_center : Icons.directions_run,
+          color: color,
+        ),
         title: Text(_formatType(workout.workoutType)),
         subtitle: Text('${workout.estimatedDurationMin} min'),
         trailing: const Icon(Icons.chevron_right),
@@ -165,9 +305,8 @@ class _WorkoutListTile extends StatelessWidget {
     );
   }
 
-  String _formatType(String type) {
-    return type.split('_').map((w) => w[0].toUpperCase() + w.substring(1)).join(' ');
-  }
+  String _formatType(String type) =>
+      type.split('_').map((w) => w[0].toUpperCase() + w.substring(1)).join(' ');
 }
 
 class _StatCard extends StatelessWidget {

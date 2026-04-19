@@ -35,17 +35,35 @@ void main() async {
     }
   }
 
-  // Seed exercises if collection is empty
-  try {
-    final exerciseSnapshot = await FirebaseFirestore.instance
-        .collection('exercises')
-        .limit(1)
-        .get();
-    if (exerciseSnapshot.docs.isEmpty) {
-      await ExerciseService().seedExercises();
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid != null) {
+    // Ensure user profile document exists
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    if (!userDoc.exists) {
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'email': FirebaseAuth.instance.currentUser?.email ?? '',
+        'name': FirebaseAuth.instance.currentUser?.displayName ?? 'Runner',
+        'createdAt': FieldValue.serverTimestamp(),
+        'goal10kTimeSec': 3600,
+        'strengthFrequency': 3,
+        'runFrequency': 2,
+        'availableEquipment': ['dumbbells'],
+        'preferredRunDays': ['tuesday', 'thursday'],
+      });
     }
-  } catch (e) {
-    debugPrint('Exercise seed error: $e');
+
+    // Seed exercises if collection is empty
+    try {
+      final exerciseSnapshot = await FirebaseFirestore.instance
+          .collection('exercises')
+          .limit(1)
+          .get();
+      if (exerciseSnapshot.docs.isEmpty) {
+        await ExerciseService().seedExercises();
+      }
+    } catch (e) {
+      debugPrint('Exercise seed error: $e');
+    }
   }
 
   runApp(const ProviderScope(child: RunForgeApp()));
