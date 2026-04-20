@@ -229,7 +229,7 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
                           leading: const Icon(Icons.calendar_today),
                           title: const Text('Date'),
                           subtitle: Text(
-                            '${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}',
+                            '${_selectedDate!.day.toString().padLeft(2, '0')}/${_selectedDate!.month.toString().padLeft(2, '0')}/${_selectedDate!.year}',
                           ),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () => _pickDate(workout),

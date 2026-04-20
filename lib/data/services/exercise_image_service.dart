@@ -12,59 +12,43 @@ class ExerciseInfoResult {
 
 /// Fetches exercise images and descriptions from the free wger.de REST API.
 /// No API key required — reads are public.
+///
+/// Uses the search endpoint per-exercise instead of loading the full catalog,
+/// which is much more reliable from localhost.
 class ExerciseImageService {
   static const _baseUrl = 'https://wger.de/api/v2';
+  static const _timeout = Duration(seconds: 8);
+  static const _maxRetries = 3;
 
   // Cache: exercise name → ExerciseInfoResult
   final Map<String, ExerciseInfoResult> _cache = {};
 
-  // Lazy-loaded full catalog from wger.de: wger exercise name → id
-  Map<String, int>? _wgerNameToId;
-
   /// Returns image URL and short description for the given exercise name.
+  ///
+  /// Uses the wger search endpoint to find the exercise by name, then fetches
+  /// its images via the exerciseinfo endpoint.
   Future<ExerciseInfoResult> getExerciseInfo(String exerciseName) async {
     final key = exerciseName.toLowerCase();
     if (_cache.containsKey(key)) return _cache[key]!;
 
     try {
-      // Ensure the full wger catalog is loaded
-      await _ensureCatalogLoaded();
-
       final searchTerm = _mapToWgerSearch(exerciseName);
 
-      // Find matching exercise in the full catalog
-      int? matchedId;
-      final lowerSearch = searchTerm.toLowerCase();
-
-      // Exact match first
-      if (_wgerNameToId!.containsKey(lowerSearch)) {
-        matchedId = _wgerNameToId![lowerSearch];
-      }
-
-      // Partial match fallback
+      // Step 1: Search for the exercise by name using the search endpoint
+      final matchedId = await _searchExerciseByName(searchTerm);
       if (matchedId == null) {
-        for (final entry in _wgerNameToId!.entries) {
-          if (entry.key.contains(lowerSearch) || lowerSearch.contains(entry.key)) {
-            matchedId = entry.value;
-            break;
-          }
-        }
-      }
-
-      if (matchedId == null) {
+        debugPrint('No wger match for "$exerciseName" (searched: "$searchTerm")');
         return _cacheAndReturn(key, ExerciseInfoResult());
       }
 
-      // Fetch full exercise info for the matched ID (includes images)
-      final infoUrl = Uri.parse('$_baseUrl/exerciseinfo/$matchedId/')
-          .replace(queryParameters: {'format': 'json', 'language': '2'});
-
-      final infoResponse = await http.get(infoUrl);
-      if (infoResponse.statusCode != 200) {
+      // Step 2: Fetch full exercise info for the matched ID (includes images)
+      final infoJson = await _getWithRetry(
+        Uri.parse('$_baseUrl/exerciseinfo/$matchedId/')
+            .replace(queryParameters: {'format': 'json', 'language': '2'}),
+      );
+      if (infoJson == null) {
         return _cacheAndReturn(key, ExerciseInfoResult());
       }
-
-      final infoJson = jsonDecode(infoResponse.body) as Map<String, dynamic>;
 
       // Extract image URL
       String? imageUrl;
@@ -91,6 +75,7 @@ class ExerciseImageService {
         }
       }
 
+      debugPrint('wger: "$exerciseName" -> image=${imageUrl != null}');
       return _cacheAndReturn(key, ExerciseInfoResult(
         imageUrl: imageUrl,
         shortDescription: shortDescription,
@@ -101,39 +86,76 @@ class ExerciseImageService {
     }
   }
 
-  /// Load the full wger.de exercise catalog by paginating through all results.
-  Future<void> _ensureCatalogLoaded() async {
-    if (_wgerNameToId != null) return;
-    _wgerNameToId = {};
+  /// Search the wger /api/v2/exercise/ endpoint by name.
+  /// Returns the exerciseinfo ID of the best match, or null.
+  Future<int?> _searchExerciseByName(String searchTerm) async {
+    final json = await _getWithRetry(
+      Uri.parse('$_baseUrl/exercise/')
+          .replace(queryParameters: {
+            'format': 'json',
+            'language': '2',
+            'name': searchTerm,
+          }),
+    );
+    if (json == null) return null;
 
-    var url = Uri.parse('$_baseUrl/exerciseinfo/')
-        .replace(queryParameters: {'format': 'json', 'language': '2', 'limit': '200'});
+    final results = json['results'] as List<dynamic>? ?? [];
+    if (results.isEmpty) return null;
 
-    while (url != Uri()) {
-      final response = await http.get(url);
-      if (response.statusCode != 200) break;
+    // Pick the first result — wger returns best matches first
+    final firstResult = results.first as Map<String, dynamic>;
+    final exerciseId = firstResult['id'] as int?;
 
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      final results = json['results'] as List<dynamic>;
+    if (exerciseId == null) return null;
 
-      for (final result in results) {
-        final id = result['id'] as int?;
-        final translations = result['translations'] as List<dynamic>? ?? [];
-        for (final t in translations) {
-          if (t['language'] == 2) {
-            final name = (t['name'] as String? ?? '').toLowerCase().trim();
-            if (name.isNotEmpty && id != null) {
-              _wgerNameToId![name] = id;
-            }
-          }
+    // The /exercise/ endpoint returns the base exercise ID.
+    // We need the exerciseinfo ID which may differ.
+    // Fetch exerciseinfo filtered by this exercise ID.
+    final infoJson = await _getWithRetry(
+      Uri.parse('$_baseUrl/exerciseinfo/')
+          .replace(queryParameters: {
+            'format': 'json',
+            'language': '2',
+            'exercise': '$exerciseId',
+          }),
+    );
+    if (infoJson == null) return null;
+
+    final infoResults = infoJson['results'] as List<dynamic>? ?? [];
+    if (infoResults.isEmpty) return exerciseId; // fallback to base ID
+
+    return (infoResults.first as Map<String, dynamic>)['id'] as int?;
+  }
+
+  /// HTTP GET with retry and exponential backoff.
+  Future<Map<String, dynamic>?> _getWithRetry(Uri url) async {
+    for (var attempt = 0; attempt < _maxRetries; attempt++) {
+      try {
+        final response = await http.get(url).timeout(_timeout);
+        if (response.statusCode == 200) {
+          return jsonDecode(response.body) as Map<String, dynamic>;
+        }
+        if (response.statusCode == 429) {
+          // Rate limited — wait longer
+          final delay = Duration(seconds: 2 * (attempt + 1));
+          debugPrint('Rate limited, retrying in ${delay.inSeconds}s...');
+          await Future.delayed(delay);
+          continue;
+        }
+        // Non-retryable status
+        debugPrint('wger HTTP ${response.statusCode} for $url');
+        return null;
+      } catch (e) {
+        if (attempt < _maxRetries - 1) {
+          final delay = Duration(seconds: 1 << attempt); // 1s, 2s, 4s
+          debugPrint('wger attempt ${attempt + 1} failed: $e, retrying in ${delay.inSeconds}s');
+          await Future.delayed(delay);
+        } else {
+          debugPrint('wger all retries exhausted for $url: $e');
         }
       }
-
-      final next = json['next'] as String?;
-      url = next != null ? Uri.parse(next) : Uri();
     }
-
-    debugPrint('Loaded ${_wgerNameToId!.length} exercises from wger.de');
+    return null;
   }
 
   /// Map our exercise names to wger.de search terms.

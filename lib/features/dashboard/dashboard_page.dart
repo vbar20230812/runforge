@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../shared/providers/user_provider.dart';
 import '../../shared/providers/auth_provider.dart';
 import '../../shared/providers/workout_provider.dart';
@@ -32,7 +31,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     final userId = ref.watch(userIdProvider);
     final today = DateTime.now();
     final weekStart = _dateOnly(today.subtract(Duration(days: today.weekday - 1)));
-    final weekEnd = _dateOnly(weekStart.add(const Duration(days: 6)));
+    final weekEnd = _dateOnly(weekStart.add(const Duration(days: 7))).subtract(const Duration(milliseconds: 1));
 
     final weekWorkouts = userId != null
         ? ref.watch(workoutListProvider(DateRange(start: weekStart, end: weekEnd)))
@@ -83,7 +82,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
             // Today section
             Text('Today', style: Theme.of(context).textTheme.titleLarge),
-            Text(DateFormat('EEEE, MMMM d').format(today),
+            Text('${DateHelpers.formatDay(today)}, ${DateHelpers.formatDate(today)}',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 12),
@@ -117,7 +116,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 return Column(children: upcoming.map((w) => _WorkoutListTile(workout: w)).toList());
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => const Text('Could not load workouts'),
+              error: (e, _) => Text('Could not load workouts: $e',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ) ?? const Center(child: CircularProgressIndicator()),
           ],
         ),

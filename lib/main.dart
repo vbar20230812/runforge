@@ -69,37 +69,56 @@ void main() async {
 
 /// Fetch images from wger.de for exercises that don't have one yet.
 /// Runs in the background — does not block app startup.
+///
+/// Uses the wger search endpoint per-exercise (not the full catalog),
+/// with retry logic built into ExerciseImageService.
 Future<void> _backfillExerciseImages() async {
   try {
     final firestore = FirebaseFirestore.instance;
     final snapshot = await firestore.collection('exercises').get();
     final imageService = ExerciseImageService();
 
+    var updated = 0;
+    var skipped = 0;
+    var failed = 0;
+
     for (final doc in snapshot.docs) {
-      final data = doc.data();
-      if (data['imageSource'] != null && (data['imageSource'] as String).isNotEmpty) {
-        continue; // Already has an image
+      try {
+        final data = doc.data();
+        if (data['imageSource'] != null && (data['imageSource'] as String).isNotEmpty) {
+          skipped++;
+          continue; // Already has an image
+        }
+
+        final name = data['name'] as String? ?? '';
+        if (name.isEmpty) continue;
+
+        final info = await imageService.getExerciseInfo(name);
+        if (info.imageUrl != null) {
+          await doc.reference.update({
+            'imageSource': info.imageUrl,
+            if (info.shortDescription != null)
+              'shortDescription': info.shortDescription,
+          });
+          updated++;
+          debugPrint('Updated image for: $name');
+        } else {
+          failed++;
+          debugPrint('No image found for: $name');
+        }
+
+        // Delay between requests to be polite to the API
+        await Future.delayed(const Duration(milliseconds: 300));
+      } catch (e) {
+        failed++;
+        debugPrint('Error backfilling ${doc.id}: $e');
+        // Continue with next exercise instead of aborting
+        await Future.delayed(const Duration(seconds: 1));
       }
-
-      final name = data['name'] as String? ?? '';
-      if (name.isEmpty) continue;
-
-      final info = await imageService.getExerciseInfo(name);
-      if (info.imageUrl != null) {
-        await doc.reference.update({
-          'imageSource': info.imageUrl,
-          if (info.shortDescription != null)
-            'shortDescription': info.shortDescription,
-        });
-        debugPrint('Updated image for: $name');
-      }
-
-      // Small delay to avoid hitting API rate limits
-      await Future.delayed(const Duration(milliseconds: 200));
     }
-    debugPrint('Exercise image backfill complete');
+    debugPrint('Image backfill done: $updated updated, $skipped skipped, $failed failed');
   } catch (e) {
-    debugPrint('Image backfill error: $e');
+    debugPrint('Image backfill fatal error: $e');
   }
 }
 

@@ -1,25 +1,34 @@
 import 'package:intl/intl.dart';
 
 class DateHelpers {
-  static final DateFormat dateFormat = DateFormat('yyyy-MM-dd');
-  static final DateFormat displayFormat = DateFormat('MMM d, yyyy');
-  static final DateFormat dayFormat = DateFormat('EEEE');
-  static final DateFormat monthFormat = DateFormat('MMMM yyyy');
+  static final DateFormat _displayFormat = DateFormat('dd/MM/yyyy');
+  static final DateFormat _shortFormat = DateFormat('dd/MM');
+  static final DateFormat _dayFormat = DateFormat('EEEE');
+  static final DateFormat _monthFormat = DateFormat('MMMM yyyy');
 
+  /// Format as DD/MM/YYYY
   static String formatDate(DateTime date) {
-    return dateFormat.format(date);
+    return _displayFormat.format(date);
   }
 
+  /// Format as DD/MM/YYYY
   static String formatDisplay(DateTime date) {
-    return displayFormat.format(date);
+    return _displayFormat.format(date);
   }
 
+  /// Format as DD/MM
+  static String formatShort(DateTime date) {
+    return _shortFormat.format(date);
+  }
+
+  /// Format as day name e.g. "Monday"
   static String formatDay(DateTime date) {
-    return dayFormat.format(date);
+    return _dayFormat.format(date);
   }
 
+  /// Format as "April 2026"
   static String formatMonth(DateTime date) {
-    return monthFormat.format(date);
+    return _monthFormat.format(date);
   }
 
   static DateTime startOfWeek(DateTime date) {

@@ -199,7 +199,7 @@ class _SnapshotTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = snapshot.snapshotDate;
-    final dateStr = '${date.day}/${date.month}/${date.year}';
+    final dateStr = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 
     return Card(
       child: ListTile(
