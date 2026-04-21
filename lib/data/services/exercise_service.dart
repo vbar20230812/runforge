@@ -89,6 +89,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 75,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bench_Press_-_Medium_Grip/0.jpg',
       },
       {
         'id': 'incline_dumbbell_press',
@@ -100,6 +101,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 70,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Dumbbell_Press/0.jpg',
       },
       {
         'id': 'dumbbell_fly',
@@ -111,6 +113,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 40,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Flyes/0.jpg',
       },
       {
         'id': 'push_up',
@@ -122,6 +125,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 50,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Push-Ups_-_Close_Triceps_Position/0.jpg',
       },
       {
         'id': 'chest_dip',
@@ -133,6 +137,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 60,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dips_-_Chest_Version/0.jpg',
       },
       {
         'id': 'cable_crossover',
@@ -144,6 +149,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 35,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Crossover/0.jpg',
       },
       {
         'id': 'decline_dumbbell_press',
@@ -155,6 +161,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 65,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Decline_Dumbbell_Bench_Press/0.jpg',
       },
       {
         'id': 'machine_chest_press',
@@ -166,6 +173,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 60,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Machine_Bench_Press/0.jpg',
       },
       {
         'id': 'dumbbell_pullover',
@@ -177,6 +185,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 45,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent-Arm_Dumbbell_Pullover/0.jpg',
       },
       {
         'id': 'squeeze_press',
@@ -188,6 +197,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 50,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Bench_Press/0.jpg',
       },
 
       // === BACK (10) ===
@@ -201,6 +211,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 70,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent_Over_Barbell_Row/0.jpg',
       },
       {
         'id': 'row_dumbbell',
@@ -212,6 +223,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': true,
         'boneDensityScore': 65,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/One-Arm_Dumbbell_Row/0.jpg',
       },
       {
         'id': 'lat_pulldown',
@@ -223,6 +235,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 50,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Wide-Grip_Lat_Pulldown/0.jpg',
       },
       {
         'id': 'pull_up',
@@ -234,6 +247,7 @@ class ExerciseService {
         'difficulty': 4,
         'isUnilateral': false,
         'boneDensityScore': 65,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Wide-Grip_Rear_Pull-Up/0.jpg',
       },
       {
         'id': 'seated_cable_row',
@@ -245,6 +259,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 50,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Cable_Rows/0.jpg',
       },
       {
         'id': 't_bar_row',
@@ -256,6 +271,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 70,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/T-Bar_Row_with_Handle/0.jpg',
       },
       {
         'id': 'single_arm_cable_row',
@@ -267,6 +283,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': true,
         'boneDensityScore': 50,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Cable_Rows/0.jpg',
       },
       {
         'id': 'renegade_row',
@@ -278,6 +295,7 @@ class ExerciseService {
         'difficulty': 4,
         'isUnilateral': true,
         'boneDensityScore': 60,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Alternating_Renegade_Row/0.jpg',
       },
       {
         'id': 'straight_arm_pulldown',
@@ -289,6 +307,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 35,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Straight-Arm_Pulldown/0.jpg',
       },
       {
         'id': 'inverted_row',
@@ -300,6 +319,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 55,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Inverted_Row/0.jpg',
       },
 
       // === SHOULDERS (8) ===
@@ -313,6 +333,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 75,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Military_Press/0.jpg',
       },
       {
         'id': 'dumbbell_lateral_raise',
@@ -324,6 +345,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Lateral_Raise/0.jpg',
       },
       {
         'id': 'face_pull',
@@ -335,6 +357,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 25,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Face_Pull/0.jpg',
       },
       {
         'id': 'arnold_press',
@@ -346,6 +369,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 65,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Arnold_Dumbbell_Press/0.jpg',
       },
       {
         'id': 'dumbbell_overhead_press',
@@ -357,6 +381,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 70,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Shoulder_Press/0.jpg',
       },
       {
         'id': 'reverse_fly_dumbbell',
@@ -368,6 +393,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Flyes/0.jpg',
       },
       {
         'id': 'upright_row_barbell',
@@ -379,6 +405,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 45,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Upright_Barbell_Row/0.jpg',
       },
       {
         'id': 'cuban_press',
@@ -390,6 +417,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 45,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cuban_Press/0.jpg',
       },
 
       // === BICEPS (8) ===
@@ -403,6 +431,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Curl/0.jpg',
       },
       {
         'id': 'dumbbell_curl',
@@ -414,6 +443,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': true,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Dumbbell_Curl/0.jpg',
       },
       {
         'id': 'hammer_curl',
@@ -425,6 +455,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': true,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hammer_Curls/0.jpg',
       },
       {
         'id': 'concentration_curl',
@@ -436,6 +467,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': true,
         'boneDensityScore': 25,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Concentration_Curls/0.jpg',
       },
       {
         'id': 'preacher_curl',
@@ -447,6 +479,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 35,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Preacher_Curl/0.jpg',
       },
       {
         'id': 'cable_curl',
@@ -458,6 +491,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 25,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Biceps_Cable_Curl/0.jpg',
       },
       {
         'id': 'ez_bar_curl',
@@ -469,6 +503,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/EZ-Bar_Curl/0.jpg',
       },
       {
         'id': 'incline_dumbbell_curl',
@@ -480,6 +515,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': true,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Dumbbell_Curl/0.jpg',
       },
 
       // === TRICEPS (8) ===
@@ -493,6 +529,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 55,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dips_-_Triceps_Version/0.jpg',
       },
       {
         'id': 'skull_crusher',
@@ -504,6 +541,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 40,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/EZ-Bar_Skullcrusher/0.jpg',
       },
       {
         'id': 'tricep_pushdown',
@@ -515,6 +553,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 25,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown/0.jpg',
       },
       {
         'id': 'overhead_tricep_extension',
@@ -526,6 +565,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 35,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Overhead_Triceps/0.jpg',
       },
       {
         'id': 'close_grip_bench_press',
@@ -537,6 +577,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 70,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Close-Grip_Barbell_Bench_Press/0.jpg',
       },
       {
         'id': 'cable_overhead_extension',
@@ -548,6 +589,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Rope_Overhead_Triceps_Extension/0.jpg',
       },
       {
         'id': 'bench_dip',
@@ -559,6 +601,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 40,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bench_Dips/0.jpg',
       },
       {
         'id': 'trx_tricep_press',
@@ -570,6 +613,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 35,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Suspended_Push-Up/0.jpg',
       },
 
       // === QUADRICEPS (8) ===
@@ -583,6 +627,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 85,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Squat/0.jpg',
       },
       {
         'id': 'leg_press',
@@ -594,6 +639,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 75,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Press/0.jpg',
       },
       {
         'id': 'bulgarian_split_squat',
@@ -605,6 +651,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': true,
         'boneDensityScore': 70,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Split_Squat_with_Dumbbells/0.jpg',
       },
       {
         'id': 'leg_extension',
@@ -616,6 +663,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 40,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Extensions/0.jpg',
       },
       {
         'id': 'goblet_squat',
@@ -627,6 +675,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 70,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Goblet_Squat/0.jpg',
       },
       {
         'id': 'front_squat_barbell',
@@ -638,6 +687,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 80,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Front_Barbell_Squat/0.jpg',
       },
       {
         'id': 'hack_squat',
@@ -649,6 +699,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 75,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hack_Squat/0.jpg',
       },
       {
         'id': 'sissy_squat',
@@ -660,6 +711,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 55,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Weighted_Sissy_Squat/0.jpg',
       },
 
       // === HAMSTRINGS (8) ===
@@ -673,6 +725,7 @@ class ExerciseService {
         'difficulty': 4,
         'isUnilateral': false,
         'boneDensityScore': 90,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Deadlift/0.jpg',
       },
       {
         'id': 'romanian_deadlift_dumbbell',
@@ -684,6 +737,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 75,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Romanian_Deadlift/0.jpg',
       },
       {
         'id': 'leg_curl',
@@ -695,6 +749,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 35,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Leg_Curls/0.jpg',
       },
       {
         'id': 'glute_bridge',
@@ -706,6 +761,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 60,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Glute_Bridge/0.jpg',
       },
       {
         'id': 'kettlebell_swing',
@@ -717,6 +773,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 65,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/One-Arm_Kettlebell_Swings/0.jpg',
       },
       {
         'id': 'good_morning',
@@ -728,6 +785,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 70,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Good_Morning/0.jpg',
       },
       {
         'id': 'nordic_curl',
@@ -739,6 +797,7 @@ class ExerciseService {
         'difficulty': 4,
         'isUnilateral': false,
         'boneDensityScore': 55,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Stiff-Legged_Dumbbell_Deadlift/0.jpg',
       },
       {
         'id': 'single_leg_rdl',
@@ -750,6 +809,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': true,
         'boneDensityScore': 65,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Kettlebell_One-Legged_Deadlift/0.jpg',
       },
 
       // === GLUTES (6) ===
@@ -763,6 +823,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 80,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Hip_Thrust/0.jpg',
       },
       {
         'id': 'glute_kickback',
@@ -774,6 +835,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Glute_Kickback/0.jpg',
       },
       {
         'id': 'banded_lateral_walk',
@@ -785,6 +847,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 25,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Lateral_Raise/0.jpg',
       },
       {
         'id': 'cable_pull_through',
@@ -796,6 +859,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 55,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pull_Through/0.jpg',
       },
       {
         'id': 'sumo_deadlift',
@@ -807,6 +871,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 85,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Sumo_Deadlift/0.jpg',
       },
       {
         'id': 'frog_pump',
@@ -818,6 +883,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 35,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Single_Leg_Glute_Bridge/0.jpg',
       },
 
       // === CALVES (4) ===
@@ -831,6 +897,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 45,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Calf_Raises/0.jpg',
       },
       {
         'id': 'calf_raise_seated',
@@ -842,6 +909,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 40,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Calf_Raise/0.jpg',
       },
       {
         'id': 'donkey_calf_raise',
@@ -853,6 +921,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 45,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Donkey_Calf_Raises/0.jpg',
       },
       {
         'id': 'single_leg_calf_raise',
@@ -864,6 +933,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': true,
         'boneDensityScore': 45,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Seated_One-Leg_Calf_Raise/0.jpg',
       },
 
       // === CORE (8) ===
@@ -877,6 +947,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Plank/0.jpg',
       },
       {
         'id': 'russian_twist',
@@ -888,6 +959,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Russian_Twist/0.jpg',
       },
       {
         'id': 'hanging_leg_raise',
@@ -899,6 +971,7 @@ class ExerciseService {
         'difficulty': 3,
         'isUnilateral': false,
         'boneDensityScore': 45,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hanging_Leg_Raise/0.jpg',
       },
       {
         'id': 'ab_wheel_rollout',
@@ -910,6 +983,7 @@ class ExerciseService {
         'difficulty': 4,
         'isUnilateral': false,
         'boneDensityScore': 50,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Ab_Roller/0.jpg',
       },
       {
         'id': 'bicycle_crunch',
@@ -921,6 +995,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Air_Bike/0.jpg',
       },
       {
         'id': 'dead_bug',
@@ -932,6 +1007,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 25,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dead_Bug/0.jpg',
       },
       {
         'id': 'pallof_press',
@@ -943,6 +1019,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pallof_Press/0.jpg',
       },
       {
         'id': 'mountain_climber_core',
@@ -954,6 +1031,7 @@ class ExerciseService {
         'difficulty': 2,
         'isUnilateral': false,
         'boneDensityScore': 40,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Mountain_Climbers/0.jpg',
       },
 
       // === CARDIO BURST (6) ===
@@ -967,6 +1045,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Calf_Raises/0.jpg',
       },
       {
         'id': 'cardio_high_knees',
@@ -978,6 +1057,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Mountain_Climbers/0.jpg',
       },
       {
         'id': 'cardio_burpees',
@@ -989,6 +1069,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Push-Ups_-_Close_Triceps_Position/0.jpg',
       },
       {
         'id': 'cardio_jumping_jacks',
@@ -1000,6 +1081,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bodyweight_Squat/0.jpg',
       },
       {
         'id': 'cardio_mountain_climbers',
@@ -1011,6 +1093,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Mountain_Climbers/0.jpg',
       },
       {
         'id': 'cardio_box_step_ups',
@@ -1022,6 +1105,7 @@ class ExerciseService {
         'difficulty': 1,
         'isUnilateral': false,
         'boneDensityScore': 30,
+        'imageSource': 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Split_Squats/0.jpg',
       },
     ];
 

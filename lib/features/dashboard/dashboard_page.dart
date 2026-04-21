@@ -80,15 +80,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 ),
               ),
 
-            // Today section
-            Text('Today', style: Theme.of(context).textTheme.titleLarge),
-            Text('${DateHelpers.formatDay(today)}, ${DateHelpers.formatDate(today)}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
-            const SizedBox(height: 12),
-            _buildTodayWorkouts(weekWorkouts, today),
-            const SizedBox(height: 24),
-
             // Weekly overview
             Text('This Week', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
@@ -101,6 +92,15 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 Expanded(child: _StatCard(icon: Icons.check_circle, label: 'Done', value: _completionRate(weekWorkouts), color: Colors.green)),
               ],
             ),
+            const SizedBox(height: 24),
+
+            // Today section
+            Text('Today', style: Theme.of(context).textTheme.titleLarge),
+            Text('${DateHelpers.formatDay(today)}, ${DateHelpers.formatDate(today)}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            const SizedBox(height: 12),
+            _buildTodayWorkouts(weekWorkouts, today),
             const SizedBox(height: 24),
 
             // Upcoming
