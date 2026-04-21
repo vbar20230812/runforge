@@ -13,6 +13,7 @@ class Exercise {
   final String? instructions;
   final int boneDensityScore;
   final String? imageSource;
+  final String? imageSourceEnd; // End position frame
   final bool hasAnimation;
 
   Exercise({
@@ -28,6 +29,7 @@ class Exercise {
     this.instructions,
     this.boneDensityScore = 50,
     this.imageSource,
+    this.imageSourceEnd,
     this.hasAnimation = false,
   });
 
@@ -46,6 +48,7 @@ class Exercise {
       shortDescription: data['shortDescription'],
       boneDensityScore: data['boneDensityScore'] ?? 50,
       imageSource: data['imageSource'],
+      imageSourceEnd: data['imageSourceEnd'],
       hasAnimation: data['hasAnimation'] ?? false,
     );
   }
@@ -64,6 +67,7 @@ class Exercise {
       'shortDescription': shortDescription,
       'boneDensityScore': boneDensityScore,
       'imageSource': imageSource,
+      'imageSourceEnd': imageSourceEnd,
       'hasAnimation': hasAnimation,
     };
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -52,8 +53,12 @@ class _ExerciseDetailContent extends ConsumerStatefulWidget {
 class _ExerciseDetailContentState
     extends ConsumerState<_ExerciseDetailContent> {
   String? _imageUrl;
+  String? _imageUrlEnd;
   String? _shortDescription;
   bool _isLoadingImage = true;
+  bool _showEndPosition = false;
+  bool _isAnimating = true;
+  Timer? _animationTimer;
 
   @override
   void initState() {
@@ -61,20 +66,26 @@ class _ExerciseDetailContentState
     _loadImage();
   }
 
+  @override
+  void dispose() {
+    _animationTimer?.cancel();
+    super.dispose();
+  }
+
   Future<void> _loadImage() async {
-    // Use stored image source if available
     if (widget.exercise.imageSource != null) {
       if (mounted) {
         setState(() {
           _imageUrl = widget.exercise.imageSource;
+          _imageUrlEnd = widget.exercise.imageSourceEnd;
           _shortDescription = widget.exercise.shortDescription;
           _isLoadingImage = false;
         });
+        _startAnimation();
       }
       return;
     }
 
-    // Otherwise fetch from the API
     try {
       final imageService = ExerciseImageService();
       final info = await imageService.getExerciseInfo(widget.exercise.name);
@@ -84,6 +95,7 @@ class _ExerciseDetailContentState
           _shortDescription = info.shortDescription ?? widget.exercise.shortDescription;
           _isLoadingImage = false;
         });
+        _startAnimation();
       }
     } catch (e) {
       debugPrint('Error loading exercise image: $e');
@@ -91,6 +103,16 @@ class _ExerciseDetailContentState
         setState(() => _isLoadingImage = false);
       }
     }
+  }
+
+  void _startAnimation() {
+    if (_imageUrlEnd == null) return;
+    _animationTimer?.cancel();
+    _animationTimer = Timer.periodic(const Duration(milliseconds: 1200), (_) {
+      if (mounted && _isAnimating) {
+        setState(() => _showEndPosition = !_showEndPosition);
+      }
+    });
   }
 
   @override
@@ -106,21 +128,30 @@ class _ExerciseDetailContentState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(context, exercise),
-            if (_shortDescription != null) ...[
-              const SizedBox(height: 16),
-              _buildShortDescription(context),
-            ],
-            const SizedBox(height: 24),
+            // Hero exercise image with animation
+            _buildHeroImage(context, exercise),
+            const SizedBox(height: 16),
+
+            // Name + difficulty row
+            _buildTitleRow(context, exercise),
+            const SizedBox(height: 16),
+
+            // Target muscles — right below the image
             _buildMuscleInfo(context, exercise),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+
+            if (_shortDescription != null) ...[
+              _buildShortDescription(context),
+              const SizedBox(height: 16),
+            ],
             _buildEquipmentInfo(context, exercise),
-            const SizedBox(height: 24),
             if (exercise.instructions != null &&
-                exercise.instructions!.isNotEmpty)
+                exercise.instructions!.isNotEmpty) ...[
+              const SizedBox(height: 16),
               _buildInstructions(context, exercise),
+            ],
             if (exercise.boneDensityScore > 0) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _buildBoneDensityScore(context, exercise),
             ],
           ],
@@ -129,70 +160,117 @@ class _ExerciseDetailContentState
     );
   }
 
-  Widget _buildHeader(BuildContext context, Exercise exercise) {
+  Widget _buildHeroImage(BuildContext context, Exercise exercise) {
+    final currentUrl = _showEndPosition && _imageUrlEnd != null
+        ? _imageUrlEnd!
+        : _imageUrl;
+    final hasEndFrame = _imageUrlEnd != null;
+
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: _isLoadingImage
-                    ? const Center(
-                        child: SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // Main image area
+          Container(
+            width: double.infinity,
+            height: 220,
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
+            child: _isLoadingImage
+                ? const Center(child: CircularProgressIndicator())
+                : currentUrl != null
+                    ? AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: CachedNetworkImage(
+                          key: ValueKey(currentUrl),
+                          imageUrl: currentUrl,
+                          fit: BoxFit.contain,
+                          placeholder: (_, __) => _placeholderImage(context),
+                          errorWidget: (_, __, ___) => _placeholderImage(context),
                         ),
                       )
-                    : _imageUrl != null
-                        ? CachedNetworkImage(
-                            imageUrl: _imageUrl!,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => _placeholderIcon(context),
-                            errorWidget: (_, __, ___) =>
-                                _placeholderIcon(context),
-                          )
-                        : _placeholderIcon(context),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                    : _placeholderImage(context),
+          ),
+
+          // Controls: Start / End / Animate toggle
+          if (hasEndFrame)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    exercise.name,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  _buildDifficultyIndicator(context, exercise.difficulty),
+                  _positionButton('Start', !_showEndPosition && !_isAnimating, () {
+                    setState(() {
+                      _isAnimating = false;
+                      _showEndPosition = false;
+                    });
+                  }),
+                  const SizedBox(width: 8),
+                  _positionButton('Animate', _isAnimating, () {
+                    setState(() => _isAnimating = true);
+                    _startAnimation();
+                  }),
+                  const SizedBox(width: 8),
+                  _positionButton('End', _showEndPosition && !_isAnimating, () {
+                    setState(() {
+                      _isAnimating = false;
+                      _showEndPosition = true;
+                    });
+                  }),
                 ],
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _placeholderIcon(BuildContext context) {
-    return Icon(
-      Icons.fitness_center,
-      size: 40,
-      color: Theme.of(context).colorScheme.onPrimaryContainer,
+  Widget _positionButton(String label, bool isActive, VoidCallback onTap) {
+    return FilledButton.tonal(
+      onPressed: onTap,
+      style: FilledButton.styleFrom(
+        backgroundColor: isActive
+            ? Theme.of(context).colorScheme.primary
+            : null,
+        foregroundColor: isActive
+            ? Theme.of(context).colorScheme.onPrimary
+            : null,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        minimumSize: Size.zero,
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 13)),
+    );
+  }
+
+  Widget _placeholderImage(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 220,
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      child: Icon(
+        Icons.fitness_center,
+        size: 64,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    );
+  }
+
+  Widget _buildTitleRow(BuildContext context, Exercise exercise) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            exercise.name,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+        ),
+        _buildDifficultyIndicator(context, exercise.difficulty),
+      ],
     );
   }
 
   Widget _buildDifficultyIndicator(BuildContext context, int difficulty) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           'Difficulty: ',
